@@ -10,24 +10,38 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.runtime.Micronaut.run
 import jakarta.inject.Provider
 import jakarta.inject.Singleton
+import org.axonframework.commandhandling.CommandBus
 import org.axonframework.commandhandling.CommandHandler
+import org.axonframework.commandhandling.SimpleCommandBus
+import org.axonframework.commandhandling.gateway.CommandGateway
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.jdbc.DataSourceConnectionProvider
 import org.axonframework.common.transaction.NoTransactionManager
 import org.axonframework.config.Configuration
 import org.axonframework.config.DefaultConfigurer
+import org.axonframework.eventhandling.EventBus
 import org.axonframework.eventhandling.EventHandler
+import org.axonframework.eventhandling.SimpleEventBus
+import org.axonframework.eventhandling.tokenstore.TokenStore
+import org.axonframework.eventhandling.tokenstore.jdbc.JdbcTokenStore
+import org.axonframework.eventhandling.tokenstore.jdbc.PostgresTokenTableFactory
 import org.axonframework.eventsourcing.EventSourcingHandler
+import org.axonframework.eventsourcing.eventstore.EmbeddedEventStore
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
 import org.axonframework.eventsourcing.eventstore.EventStore
 import org.axonframework.eventsourcing.eventstore.jdbc.JdbcEventStorageEngine
 import org.axonframework.eventsourcing.eventstore.jdbc.PostgresEventTableFactory
+import org.axonframework.messaging.interceptors.BeanValidationInterceptor
 import org.axonframework.modelling.command.AggregateCreationPolicy
 import org.axonframework.modelling.command.AggregateIdentifier
 import org.axonframework.modelling.command.AggregateLifecycle
 import org.axonframework.modelling.command.CreationPolicy
+import org.axonframework.modelling.command.Repository
 import org.axonframework.modelling.command.TargetAggregateIdentifier
+import org.axonframework.modelling.command.GenericJpaRepository
 import org.axonframework.serialization.json.JacksonSerializer
+import org.axonframework.queryhandling.QueryBus
+import org.axonframework.queryhandling.SimpleQueryBus
 import org.postgresql.ds.PGSimpleDataSource
 
 
@@ -77,14 +91,13 @@ fun main(args: Array<String>) {
 data class ScheduleFlightCommand(@TargetAggregateIdentifier val id: String /*, other state */)
 
 @Controller("/flight")
-class FlightController(private val commandGateway: org.axonframework.commandhandling.gateway.CommandGateway) {
+class FlightController(private val commandGateway: CommandGateway) {
 
 	@Get("/schedule/{flightId}")
 	fun flight(flightId: String): String {
 		val result: Any = commandGateway.sendAndWait(ScheduleFlightCommand(flightId))
 		return result.toString()
 	}
-
 }
 
 class FlightCommandHandler {
@@ -108,44 +121,17 @@ class FlightCommandHandler2(private val eventStore: Provider<EventStore>) {
 	}
 }
 
-class FlightAggregate {
-	@AggregateIdentifier
-	private var aggregateId: String? = null
-
-	// other state ...
-	@CommandHandler
-	@CreationPolicy(AggregateCreationPolicy.CREATE_IF_MISSING)
-	fun handle(command: ScheduleFlightCommand): String {
-		if (aggregateId == null) {
-			AggregateLifecycle.apply(FlightScheduledEvent(command.id))
-			return "Flight scheduled with id: ${command.id}"
-		}else{
-			return "Flight scheduled with id: ${command.id} again"
-		}
-
-	}
-
-	@EventSourcingHandler
-	fun on(event: FlightScheduledEvent) {
-		this.aggregateId = event.flightId
-		println("Flight scheduled with id: ${event.flightId}")
-	}
-}
-
-
 class FlightAggregate2(@AggregateIdentifier private var aggregateId: String? = null) {
 
-    // other state ...
 	@CommandHandler
 	@CreationPolicy(AggregateCreationPolicy.CREATE_IF_MISSING)
 	fun handle(command: ScheduleFlightCommand): String {
 		if (aggregateId == null) {
 			AggregateLifecycle.apply(FlightScheduledEvent(command.id))
 			return "Flight scheduled with id: ${command.id}"
-		}else{
+		} else {
 			return "Flight scheduled with id: ${command.id} again"
 		}
-
 	}
 
 	@EventSourcingHandler
@@ -156,23 +142,18 @@ class FlightAggregate2(@AggregateIdentifier private var aggregateId: String? = n
 }
 
 @Singleton
-class Projection1{
+class Projection1 {
 
 	@EventHandler
 	fun on(event: FlightScheduledEvent) {
 		println("Projection1 Flight scheduled with id: ${event.flightId}")
 	}
-
 }
 
 data class FlightScheduledEvent(val flightId: String)
 
-
-
-
 @Factory
 class AxonFactory {
-
 
 	@Singleton
 	fun dataSource(): PGSimpleDataSource = PGSimpleDataSource().apply {
@@ -185,11 +166,23 @@ class AxonFactory {
 	fun connectionProvider(dataSource: PGSimpleDataSource): ConnectionProvider = DataSourceConnectionProvider(dataSource)
 
 	@Singleton
-	fun eventStoreEngine(connectionProvider: ConnectionProvider): EventStorageEngine {
+	fun tokenStore(connectionProvider: ConnectionProvider): TokenStore {
+		val tokenStore = JdbcTokenStore.builder()
+			.connectionProvider(connectionProvider)
+			.serializer(jacksonSerializer())
+			.build()
+
+		// Create the token store schema
+		tokenStore.createSchema(PostgresTokenTableFactory.INSTANCE)
+
+		return tokenStore
+	}
+
+	@Singleton
+	fun eventStorageEngine(connectionProvider: ConnectionProvider): EventStorageEngine {
 		val serializer = jacksonSerializer()
 
-		val engine = JdbcEventStorageEngine
-			.builder()
+		val engine = JdbcEventStorageEngine.builder()
 			.connectionProvider(connectionProvider)
 			.transactionManager(NoTransactionManager.INSTANCE)
 			.eventSerializer(serializer)
@@ -200,72 +193,75 @@ class AxonFactory {
 		return engine
 	}
 
-//	@Singleton
-//	fun eventStore(storageEngine: EventStorageEngine): EventStore {
-//		val eventStore: EmbeddedEventStore = EmbeddedEventStore
-//			.builder()
-//			.storageEngine(storageEngine)
-//			.build()
-//
-//		return eventStore
-//	}
+	@Singleton
+	fun eventStore(storageEngine: EventStorageEngine): EventStore {
+		return EmbeddedEventStore.builder()
+			.storageEngine(storageEngine)
+			.build()
+	}
 
 	@Singleton
-	fun configuration(projection1: Projection1, eventStoreEngine: EventStorageEngine): Configuration {
-		val configurer =
-		DefaultConfigurer
-			.defaultConfiguration()
-			.configureEmbeddedEventStore { config -> eventStoreEngine }
+	fun commandBus(): CommandBus {
+		return SimpleCommandBus.builder()
+			.transactionManager(NoTransactionManager.INSTANCE)
+			.build()
+	}
+
+	@Singleton
+	fun queryBus(): QueryBus {
+		return SimpleQueryBus.builder()
+			.transactionManager(NoTransactionManager.INSTANCE)
+			.build()
+	}
+
+	@Singleton
+	fun eventBus(): EventBus {
+		return SimpleEventBus.builder().build()
+	}
+
+	@Singleton
+	fun configuration(
+		projection1: Projection1,
+		eventStore: EventStore,
+		commandBus: CommandBus,
+		queryBus: QueryBus,
+		tokenStore: TokenStore
+	): Configuration {
+		val configurer = DefaultConfigurer.defaultConfiguration()
+			.configureEventStore { _ -> eventStore }
+			.configureCommandBus { _ -> commandBus }
+			.configureQueryBus { _ -> queryBus }
 			.configureSerializer { jacksonSerializer() }
 			.configureAggregate(FlightAggregate2::class.java)
-			.eventProcessing {
-				it
+			.eventProcessing { config ->
+				config
+					.registerTokenStore { _ -> tokenStore }
 					.registerTrackingEventProcessor("dave")
-					//.registerTrackingEventProcessor("dave") // TODO: Try creating a Persistent stream processor here which support replays
 					.registerEventHandler { projection1 }
-					//.usingSubscribingEventProcessors()	// Same thread.
-
 			}
-			//.registerEventHandler { projection1 }
-			//.registerCommandHandler { handler }
-			//.registerCommandHandler { handler2 }
-			//.registerComponent<>()
 
-		return configurer.start().apply {
-			start()
+		return configurer.buildConfiguration().also {
+			it.start()
 		}
 	}
 
 	@Singleton
-	fun eventStore(config: Configuration): EventStore {
-		return config.eventStore()
-	}
-
-	@Singleton
-	fun commandGateway(config: Configuration): org.axonframework.commandhandling.gateway.CommandGateway {
+	fun commandGateway(config: Configuration): CommandGateway {
 		return config.commandGateway()
 	}
 
 	private fun jacksonSerializer(): JacksonSerializer {
-		return JacksonSerializer
-			.builder()
+		return JacksonSerializer.builder()
 			.objectMapper(
 				ObjectMapper().apply {
 					registerModule(
-                        KotlinModule.Builder()
-						.configure(KotlinFeature.NullToEmptyCollection, true)
-						.build())
-					registerModule(
-						JavaTimeModule()
+						KotlinModule.Builder()
+							.configure(KotlinFeature.NullToEmptyCollection, true)
+							.build()
 					)
+					registerModule(JavaTimeModule())
 				}
-
 			)
 			.build()
 	}
-
-
-
-
-
 }
