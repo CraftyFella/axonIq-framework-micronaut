@@ -14,12 +14,10 @@ import org.axonframework.commandhandling.CommandHandler
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.jdbc.DataSourceConnectionProvider
 import org.axonframework.common.transaction.NoTransactionManager
-import org.axonframework.common.transaction.TransactionManager
 import org.axonframework.config.Configuration
 import org.axonframework.config.DefaultConfigurer
 import org.axonframework.eventhandling.EventHandler
 import org.axonframework.eventsourcing.EventSourcingHandler
-import org.axonframework.eventsourcing.eventstore.EmbeddedEventStore
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
 import org.axonframework.eventsourcing.eventstore.EventStore
 import org.axonframework.eventsourcing.eventstore.jdbc.JdbcEventStorageEngine
@@ -188,11 +186,16 @@ class AxonFactory {
 
 	@Singleton
 	fun eventStoreEngine(connectionProvider: ConnectionProvider): EventStorageEngine {
+		val serializer = jacksonSerializer()
+
 		val engine = JdbcEventStorageEngine
 			.builder()
 			.connectionProvider(connectionProvider)
 			.transactionManager(NoTransactionManager.INSTANCE)
+			.eventSerializer(serializer)
+			.snapshotSerializer(serializer)
 			.build()
+
 		engine.createSchema(PostgresEventTableFactory.INSTANCE)
 		return engine
 	}
