@@ -24,10 +24,17 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
     compileOnly("io.micronaut:micronaut-http-client")
     runtimeOnly("ch.qos.logback:logback-classic")
-    runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     testImplementation("io.micronaut:micronaut-http-client")
     runtimeOnly("org.yaml:snakeyaml")
 
+    implementation("org.axonframework:axon-configuration:4.11.2")
+    implementation("org.axonframework:axon-server-connector:4.11.2")
+
+    implementation("org.postgresql:postgresql:42.7.1")
+
+    testImplementation("org.axonframework:axon-test:4.11.2")
 }
 
 
