@@ -8,7 +8,6 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.runtime.Micronaut.run
-import jakarta.inject.Provider
 import jakarta.inject.Singleton
 import org.axonframework.commandhandling.CommandBus
 import org.axonframework.commandhandling.CommandHandler
@@ -19,6 +18,7 @@ import org.axonframework.common.jdbc.DataSourceConnectionProvider
 import org.axonframework.common.transaction.NoTransactionManager
 import org.axonframework.config.Configuration
 import org.axonframework.config.DefaultConfigurer
+import org.axonframework.config.ProcessingGroup
 import org.axonframework.eventhandling.EventBus
 import org.axonframework.eventhandling.EventHandler
 import org.axonframework.eventhandling.SimpleEventBus
@@ -31,17 +31,14 @@ import org.axonframework.eventsourcing.eventstore.EventStorageEngine
 import org.axonframework.eventsourcing.eventstore.EventStore
 import org.axonframework.eventsourcing.eventstore.jdbc.JdbcEventStorageEngine
 import org.axonframework.eventsourcing.eventstore.jdbc.PostgresEventTableFactory
-import org.axonframework.messaging.interceptors.BeanValidationInterceptor
 import org.axonframework.modelling.command.AggregateCreationPolicy
 import org.axonframework.modelling.command.AggregateIdentifier
 import org.axonframework.modelling.command.AggregateLifecycle
 import org.axonframework.modelling.command.CreationPolicy
-import org.axonframework.modelling.command.Repository
 import org.axonframework.modelling.command.TargetAggregateIdentifier
-import org.axonframework.modelling.command.GenericJpaRepository
-import org.axonframework.serialization.json.JacksonSerializer
 import org.axonframework.queryhandling.QueryBus
 import org.axonframework.queryhandling.SimpleQueryBus
+import org.axonframework.serialization.json.JacksonSerializer
 import org.postgresql.ds.PGSimpleDataSource
 
 
@@ -89,39 +86,55 @@ fun main(args: Array<String>) {
  */
 
 data class ScheduleFlightCommand(@TargetAggregateIdentifier val id: String /*, other state */)
+data class DelayFlightCommand(@TargetAggregateIdentifier val id: String /*, other state */)
+data class CancelFlightCommand(@TargetAggregateIdentifier val id: String /*, other state */)
 
 @Controller("/flight")
 class FlightController(private val commandGateway: CommandGateway) {
 
-	@Get("/schedule/{flightId}")
+	@Get("{flightId}/schedule")
 	fun flight(flightId: String): String {
 		val result: Any = commandGateway.sendAndWait(ScheduleFlightCommand(flightId))
 		return result.toString()
 	}
-}
 
-class FlightCommandHandler {
+	@Get("{flightId}/delay/")
+	fun delay(flightId: String): String {
+		val result: Any = commandGateway.sendAndWait(DelayFlightCommand(flightId))
+		return result.toString()
+	}
 
-	@CommandHandler
-	fun handle(command: ScheduleFlightCommand): String {
-		println("Flight scheduled with id: ${command.id}")
-		return "Flight scheduled with id: ${command.id}"
+	@Get("{flightId}/cancel/")
+	fun cancel(flightId: String): String {
+		val result: Any = commandGateway.sendAndWait(CancelFlightCommand(flightId))
+		return result.toString()
 	}
 }
 
-@Singleton
-class FlightCommandHandler2(private val eventStore: Provider<EventStore>) {
+//class FlightCommandHandler {
+//
+//	@CommandHandler
+//	fun handle(command: ScheduleFlightCommand): String {
+//		println("Flight scheduled with id: ${command.id}")
+//		return "Flight scheduled with id: ${command.id}"
+//	}
+//}
 
-	@CommandHandler
-	fun handle(command: ScheduleFlightCommand): String {
-		eventStore.get().readEvents(command.id).forEach { event ->
-			println("Event: ${event.payload}")
-		}
-		return "Flight scheduled2 with id: ${command.id}"
-	}
-}
+//@Singleton
+//class FlightCommandHandler2(private val eventStore: Provider<EventStore>) {
+//
+//	@CommandHandler
+//	fun handle(command: ScheduleFlightCommand): String {
+//		eventStore.get().readEvents(command.id).forEach { event ->
+//			println("Event: ${event.payload}")
+//		}
+//		return "Flight scheduled2 with id: ${command.id}"
+//	}
+//}
 
-class FlightAggregate2(@AggregateIdentifier private var aggregateId: String? = null) {
+class FlightAggregate(@AggregateIdentifier private var aggregateId: String? = null) {
+
+	var cancelled: Boolean = false
 
 	@CommandHandler
 	@CreationPolicy(AggregateCreationPolicy.CREATE_IF_MISSING)
@@ -134,11 +147,43 @@ class FlightAggregate2(@AggregateIdentifier private var aggregateId: String? = n
 		}
 	}
 
+	@CommandHandler
+	@CreationPolicy(AggregateCreationPolicy.NEVER)
+	fun handle(command: CancelFlightCommand): String {
+		if (cancelled) {
+			throw IllegalStateException("Flight already cancelled")
+		}
+		AggregateLifecycle.apply(FlightCancelledEvent(command.id))
+		return "Flight cancelled with id: ${command.id}"
+	}
+
+	@CommandHandler
+	@CreationPolicy(AggregateCreationPolicy.NEVER)
+	fun handle(command: DelayFlightCommand): String {
+		if (cancelled) {
+			throw IllegalStateException("Flight already cancelled")
+		}
+		AggregateLifecycle.apply(FlightDelayedEvent(command.id))
+		return "Flight delayed with id: ${command.id}"
+	}
+
 	@EventSourcingHandler
 	fun on(event: FlightScheduledEvent) {
 		this.aggregateId = event.flightId
 		println("EventSourcingHandler Flight scheduled with id: ${event.flightId}")
 	}
+
+	@EventSourcingHandler
+	fun on(event: FlightDelayedEvent) {
+		println("EventSourcingHandler Flight delay with id: ${event.flightId}")
+	}
+
+	@EventSourcingHandler
+	fun on(event: FlightCancelledEvent) {
+		this.cancelled = true
+		println("EventSourcingHandler Flight cancel with id: ${event.flightId}")
+	}
+
 }
 
 @Singleton
@@ -148,9 +193,62 @@ class Projection1 {
 	fun on(event: FlightScheduledEvent) {
 		println("Projection1 Flight scheduled with id: ${event.flightId}")
 	}
+
+	@EventHandler
+	fun on(event: FlightDelayedEvent) {
+		println("Projection1 Flight delayed with id: ${event.flightId}")
+	}
+
+	@EventHandler
+	fun on(event: FlightCancelledEvent) {
+		println("Projection1 Flight cancelled with id: ${event.flightId}")
+	}
+}
+
+@Singleton
+@ProcessingGroup("Projection2")
+class Projection2 {
+
+	@EventHandler
+	fun on(event: FlightScheduledEvent) {
+		println("Projection2 Flight scheduled with id: ${event.flightId}")
+	}
+
+	@EventHandler
+	fun on(event: FlightDelayedEvent) {
+		println("Projection2 Flight delayed with id: ${event.flightId}")
+	}
+
+	@EventHandler
+	fun on(event: FlightCancelledEvent) {
+		println("Projection2 Flight cancelled with id: ${event.flightId}")
+	}
+}
+
+
+@Singleton
+@ProcessingGroup("other")
+class Projection3 {
+
+	@EventHandler
+	fun on(event: FlightScheduledEvent) {
+		println("Projection3 Flight scheduled with id: ${event.flightId}")
+	}
+
+	@EventHandler
+	fun on(event: FlightDelayedEvent) {
+		println("Projection3 Flight delayed with id: ${event.flightId}")
+	}
+
+	@EventHandler
+	fun on(event: FlightCancelledEvent) {
+		println("Projection3 Flight cancelled with id: ${event.flightId}")
+	}
 }
 
 data class FlightScheduledEvent(val flightId: String)
+data class FlightDelayedEvent(val flightId: String)
+data class FlightCancelledEvent(val flightId: String)
 
 @Factory
 class AxonFactory {
@@ -222,6 +320,8 @@ class AxonFactory {
 	@Singleton
 	fun configuration(
 		projection1: Projection1,
+		projection2: Projection2,
+		projection3: Projection3,
 		eventStore: EventStore,
 		commandBus: CommandBus,
 		queryBus: QueryBus,
@@ -232,12 +332,17 @@ class AxonFactory {
 			.configureCommandBus { _ -> commandBus }
 			.configureQueryBus { _ -> queryBus }
 			.configureSerializer { jacksonSerializer() }
-			.configureAggregate(FlightAggregate2::class.java)
+			.configureAggregate(FlightAggregate::class.java)
 			.eventProcessing { config ->
 				config
 					.registerTokenStore { _ -> tokenStore }
-					.registerTrackingEventProcessor("dave")
+					.registerTrackingEventProcessor("dave3")
 					.registerEventHandler { projection1 }
+					.registerTrackingEventProcessor("dave2")
+					.registerEventHandler { projection2 }
+					.registerSubscribingEventProcessor("other")
+					.registerEventHandler { projection3 }
+
 			}
 
 		return configurer.buildConfiguration().also {
