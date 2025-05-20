@@ -16,6 +16,7 @@ import org.axonframework.commandhandling.gateway.CommandGateway
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.jdbc.DataSourceConnectionProvider
 import org.axonframework.common.transaction.NoTransactionManager
+import org.axonframework.config.AggregateConfigurer
 import org.axonframework.config.Configuration
 import org.axonframework.config.DefaultConfigurer
 import org.axonframework.config.ProcessingGroup
@@ -25,6 +26,7 @@ import org.axonframework.eventhandling.SimpleEventBus
 import org.axonframework.eventhandling.tokenstore.TokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.JdbcTokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.PostgresTokenTableFactory
+import org.axonframework.eventsourcing.EventCountSnapshotTriggerDefinition
 import org.axonframework.eventsourcing.EventSourcingHandler
 import org.axonframework.eventsourcing.eventstore.EmbeddedEventStore
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
@@ -132,7 +134,7 @@ class FlightController(private val commandGateway: CommandGateway) {
 //	}
 //}
 
-class FlightAggregate(@AggregateIdentifier private var aggregateId: String? = null) {
+class FlightAggregate(@AggregateIdentifier var aggregateId: String? = null) {
 
 	var cancelled: Boolean = false
 
@@ -332,7 +334,14 @@ class AxonFactory {
 			.configureCommandBus { _ -> commandBus }
 			.configureQueryBus { _ -> queryBus }
 			.configureSerializer { jacksonSerializer() }
-			.configureAggregate(FlightAggregate::class.java)
+			.configureAggregate(				AggregateConfigurer.defaultConfiguration(FlightAggregate::class.java)
+				.configureSnapshotTrigger { c ->
+					EventCountSnapshotTriggerDefinition(
+						c.snapshotter(), 5
+					)
+				}
+			)
+
 			.eventProcessing { config ->
 				config
 					.registerTokenStore { _ -> tokenStore }
