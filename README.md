@@ -14,11 +14,12 @@ seems you can read the events directly from the event store anyway.
 
 ### TODO
 
-* Try out Live projections (use event store to read events directly)
-* subscribing event processor (same thread)
-* Streaming event processor (background thread)
-* Try out snapshots
-* Try out sagas
+* ~~Try out Live projections (use event store to read events directly)~~
+* ~~subscribing event processor (same thread)~~
+* ~~Streaming event processor (background thread)~~
+* ~~Try out snapshots~~
+* ~~Try out sagas~~~~~~
+* Transactions
 
 ### Transactions TODO
 
