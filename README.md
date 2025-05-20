@@ -1,28 +1,60 @@
-## Micronaut 4.8.2 Documentation
+## Axon with Micronaut and Postgres
 
-- [User Guide](https://docs.micronaut.io/4.8.2/guide/index.html)
-- [API Reference](https://docs.micronaut.io/4.8.2/api/index.html)
-- [Configuration Reference](https://docs.micronaut.io/4.8.2/guide/configurationreference.html)
-- [Micronaut Guides](https://guides.micronaut.io/index.html)
----
+### Functional Event Sourcing Idea
 
-- [Shadow Gradle Plugin](https://gradleup.com/shadow/)
-- [Micronaut Gradle Plugin documentation](https://micronaut-projects.github.io/micronaut-gradle-plugin/latest/)
-- [GraalVM Gradle Plugin documentation](https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html)
-## Feature ksp documentation
+Some ideas to make this code better.
 
-- [Micronaut Kotlin Symbol Processing (KSP) documentation](https://docs.micronaut.io/latest/guide/#kotlin)
+Create a dummy aggregate that we can use to return the new events
+That dummy aggregate has the id and a T for the state.
+The T is created using an evolve function
+The handlers all take the T as a parameter and the command and return n events
+They are passed to a funciotn which uses the apply static to publish those events.
+This way we get the functional event sourcing we crave and also snapshots etc.
+seems you can read the events directly from the event store anyway.
 
-- [https://kotlinlang.org/docs/ksp-overview.html](https://kotlinlang.org/docs/ksp-overview.html)
+### TODO
 
+* Try out Live projections (use event store to read events directly)
+* subscribing event processor (same thread)
+* Streaming event processor (background thread)
+* Try out snapshots
+* Try out sagas
 
-## Feature serialization-jackson documentation
+### Transactions TODO
 
-- [Micronaut Serialization Jackson Core documentation](https://micronaut-projects.github.io/micronaut-serialization/latest/guide/)
+	See if I can wire in a transaction manager for POSTGres or Mongo and see if MN has support for jakarta.persistenc whic is what JpaEventStorageEngine uses..
 
+	Ideally though we're going to connect to mongo or postgres.
 
-## Feature micronaut-aot documentation
+	TIP:  This scenario is why we recommend storing tokens and projections in the same database.
 
-- [Micronaut AOT documentation](https://micronaut-projects.github.io/micronaut-aot/latest/guide/)
+### Alternative Implementations
 
+Using a command handler instead of the aggregate.
 
+```kotlin
+class FlightCommandHandler {
+
+	@CommandHandler
+	fun handle(command: ScheduleFlightCommand): String {
+		println("Flight scheduled with id: ${command.id}")
+		return "Flight scheduled with id: ${command.id}"
+	}
+}
+```
+
+Using the event store directly to pull down a list of events for Live projection
+
+```kotlin
+@Singleton
+class FlightCommandHandler2(private val eventStore: Provider<EventStore>) {
+
+	@CommandHandler
+	fun handle(command: ScheduleFlightCommand): String {
+		eventStore.get().readEvents(command.id).forEach { event ->
+			println("Event: ${event.payload}")
+		}
+		return "Flight scheduled2 with id: ${command.id}"
+	}
+}
+```
