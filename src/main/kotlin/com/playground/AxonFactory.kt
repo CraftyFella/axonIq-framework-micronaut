@@ -5,13 +5,16 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.event.ApplicationEventListener
+import io.micronaut.runtime.server.event.ServerStartupEvent
 import jakarta.inject.Singleton
 import org.axonframework.commandhandling.CommandBus
 import org.axonframework.commandhandling.SimpleCommandBus
 import org.axonframework.commandhandling.gateway.CommandGateway
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.jdbc.DataSourceConnectionProvider
-import org.axonframework.common.transaction.NoTransactionManager
+import org.axonframework.common.transaction.Transaction
+import org.axonframework.common.transaction.TransactionManager
 import org.axonframework.config.AggregateConfigurer
 import org.axonframework.config.Configuration
 import org.axonframework.config.DefaultConfigurer
@@ -33,6 +36,7 @@ import org.axonframework.queryhandling.QueryBus
 import org.axonframework.queryhandling.SimpleQueryBus
 import org.axonframework.serialization.json.JacksonSerializer
 import org.postgresql.ds.PGSimpleDataSource
+import java.util.function.Supplier
 
 @Factory
 class AxonFactory {
@@ -61,39 +65,78 @@ class AxonFactory {
 		return tokenStore
 	}
 
+
+	class LoggingTransactionManager : TransactionManager {
+
+		override fun startTransaction(): Transaction? {
+			println("Starting transaction")
+			return transaction
+		}
+
+		override fun executeInTransaction(task: Runnable?) {
+			println("Executing in transaction ${task}")
+			super.executeInTransaction(task)
+			println("Executed in transaction ${task}")
+		}
+
+		override fun <T : Any?> fetchInTransaction(supplier: Supplier<T?>?): T? {
+			println("Fetching in transaction ${supplier}")
+			val result = super.fetchInTransaction(supplier)
+			println("Fetched in transaction ${supplier} ${result}")
+			return result
+		}
+
+		class LoggingTransaction : Transaction {
+			override fun commit() {
+				println("Committing transaction")
+			}
+
+			override fun rollback() {
+				println("Rolling back transaction")
+			}
+		}
+
+		companion object {
+			private val transaction = LoggingTransaction()
+			val INSTANCE = LoggingTransactionManager()
+		}
+
+	}
+
 	@Singleton
 	fun eventStorageEngine(connectionProvider: ConnectionProvider): EventStorageEngine {
 		val serializer = jacksonSerializer()
 
-		val engine = JdbcEventStorageEngine.builder()
-			.connectionProvider(connectionProvider)
-			.transactionManager(NoTransactionManager.INSTANCE)
-			.eventSerializer(serializer)
+		val engine = JdbcEventStorageEngine
+			.builder()
 			.snapshotSerializer(serializer)
+			.eventSerializer(serializer)
+			.connectionProvider(connectionProvider)
+			.transactionManager(LoggingTransactionManager.INSTANCE)
 			.build()
 
 		engine.createSchema(PostgresEventTableFactory.INSTANCE)
 		return engine
 	}
 
-	@Singleton
-	fun eventStore(storageEngine: EventStorageEngine): EventStore {
-		return EmbeddedEventStore.builder()
-			.storageEngine(storageEngine)
-			.build()
-	}
+//	@Singleton
+//	fun eventStore(storageEngine: EventStorageEngine): EventStore {
+//		return EmbeddedEventStore.builder()
+//			.storageEngine(storageEngine)
+//			.build()
+//	}
 
 	@Singleton
 	fun commandBus(): CommandBus {
 		return SimpleCommandBus.builder()
-			.transactionManager(NoTransactionManager.INSTANCE)
+			.transactionManager(LoggingTransactionManager.INSTANCE)
 			.build()
 	}
 
 	@Singleton
 	fun queryBus(): QueryBus {
 		return SimpleQueryBus.builder()
-			.transactionManager(NoTransactionManager.INSTANCE)
+			.transactionManager(LoggingTransactionManager.INSTANCE)
 			.build()
 	}
 
@@ -120,17 +163,17 @@ class AxonFactory {
 
 	@Singleton
 	fun configuration(
-		projection1: Projection1,
-		projection2: Projection2,
-		projection3: Projection3,
-		eventStore: EventStore,
+		aysncProjecitonWithStandardProcessingGroup: AysncProjecitonWithStandardProcessingGroup,
+		asyncProjectionWithCustomProcessingGroup: AsyncProjectionWithCustomProcessingGroup,
+		inLineProjection: InLineProjection,
+		storageEngine: EventStorageEngine,
 		commandBus: CommandBus,
 		queryBus: QueryBus,
 		tokenStore: TokenStore,
 		sagaStore: SagaStore<Any>
 	): Configuration {
-		val configurer = DefaultConfigurer.defaultConfiguration()
-			.configureEventStore { _ -> eventStore }
+		val configurer = DefaultConfigurer.defaultConfiguration(false)
+			.configureEmbeddedEventStore { _ -> storageEngine }
 			.configureCommandBus { _ -> commandBus }
 			.configureQueryBus { _ -> queryBus }
 			.configureSerializer { jacksonSerializer() }
@@ -146,18 +189,14 @@ class AxonFactory {
 				config
 					.registerTokenStore { _ -> tokenStore }
 					.registerSagaStore { _ -> sagaStore }
-					.registerTrackingEventProcessor("dave3")
-					.registerEventHandler { projection1 }
-					.registerTrackingEventProcessor("dave2")
-					.registerEventHandler { projection2 }
 					.registerSubscribingEventProcessor("other")
-					.registerEventHandler { projection3 }
+					.registerEventHandler { aysncProjecitonWithStandardProcessingGroup }
+					.registerEventHandler { asyncProjectionWithCustomProcessingGroup }
+					.registerEventHandler { inLineProjection }
 					.registerSaga(FlightManagementSaga::class.java)
 			}
 
-		return configurer.buildConfiguration().also {
-			it.start()
-		}
+		return configurer.buildConfiguration()
 	}
 
 	@Singleton
@@ -179,4 +218,14 @@ class AxonFactory {
 			)
 			.build()
 	}
+
+	@Singleton
+	class AxonStarter(private val config: Configuration) : ApplicationEventListener<ServerStartupEvent>
+	{
+		override fun onApplicationEvent(event: ServerStartupEvent?) {
+			config.start()
+		}
+
+	}
+
 }

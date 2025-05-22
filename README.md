@@ -18,7 +18,8 @@ seems you can read the events directly from the event store anyway.
 * ~~subscribing event processor (same thread)~~
 * ~~Streaming event processor (background thread)~~
 * ~~Try out snapshots~~
-* ~~Try out sagas~~~~~~
+* ~~Try out sagas~~
+* Why are transactions starting and commiting over and over again? Something todo with the GapTracking
 * Transactions
 
 ### Transactions TODO

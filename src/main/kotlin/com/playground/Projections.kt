@@ -5,7 +5,7 @@ import org.axonframework.config.ProcessingGroup
 import org.axonframework.eventhandling.EventHandler
 
 @Singleton
-class Projection1 {
+class AysncProjecitonWithStandardProcessingGroup {
 
     @EventHandler
     fun on(event: FlightScheduledEvent) {
@@ -25,7 +25,7 @@ class Projection1 {
 
 @Singleton
 @ProcessingGroup("Projection2")
-class Projection2 {
+class AsyncProjectionWithCustomProcessingGroup {
 
     @EventHandler
     fun on(event: FlightScheduledEvent) {
@@ -46,7 +46,7 @@ class Projection2 {
 
 @Singleton
 @ProcessingGroup("other")
-class Projection3 {
+class InLineProjection {
 
     @EventHandler
     fun on(event: FlightScheduledEvent) {
@@ -60,6 +60,9 @@ class Projection3 {
 
     @EventHandler
     fun on(event: FlightCancelledEvent) {
+        if (event.flightId == "breaksprojection2") {
+            throw RuntimeException("Projection3 Flight cancelled with id: ${event.flightId}")
+        }
         println("Projection3 Flight cancelled with id: ${event.flightId}")
     }
 }
