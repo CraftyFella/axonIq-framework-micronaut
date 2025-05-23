@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
@@ -24,9 +26,7 @@ import org.axonframework.eventhandling.tokenstore.TokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.JdbcTokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.PostgresTokenTableFactory
 import org.axonframework.eventsourcing.EventCountSnapshotTriggerDefinition
-import org.axonframework.eventsourcing.eventstore.EmbeddedEventStore
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
-import org.axonframework.eventsourcing.eventstore.EventStore
 import org.axonframework.eventsourcing.eventstore.jdbc.JdbcEventStorageEngine
 import org.axonframework.eventsourcing.eventstore.jdbc.PostgresEventTableFactory
 import org.axonframework.modelling.saga.repository.SagaStore
@@ -37,19 +37,51 @@ import org.axonframework.queryhandling.SimpleQueryBus
 import org.axonframework.serialization.json.JacksonSerializer
 import org.postgresql.ds.PGSimpleDataSource
 import java.util.function.Supplier
+import javax.sql.DataSource
 
 @Factory
 class AxonFactory {
 
 	@Singleton
-	fun dataSource(): PGSimpleDataSource = PGSimpleDataSource().apply {
-		setUrl("jdbc:postgresql://localhost:5432/axon_eventstore")
-		user = "postgres"
-		password = "password"
+	fun dataSource(): DataSource {
+		val config = HikariConfig().apply {
+			jdbcUrl = "jdbc:postgresql://localhost:5432/axon_eventstore"
+			username = "postgres"
+			password = "password"
+			driverClassName = "org.postgresql.Driver"
+
+			// Connection pool settings
+			maximumPoolSize = 20
+			minimumIdle = 5
+			connectionTimeout = 30000 // 30 seconds
+			idleTimeout = 600000 // 10 minutes
+			maxLifetime = 1800000 // 30 minutes
+			leakDetectionThreshold = 60000 // 60 seconds
+
+			// PostgreSQL specific optimizations
+			addDataSourceProperty("cachePrepStmts", "true")
+			addDataSourceProperty("prepStmtCacheSize", "250")
+			addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
+			addDataSourceProperty("useServerPrepStmts", "true")
+			addDataSourceProperty("useLocalSessionState", "true")
+			addDataSourceProperty("rewriteBatchedStatements", "true")
+			addDataSourceProperty("cacheResultSetMetadata", "true")
+			addDataSourceProperty("cacheServerConfiguration", "true")
+			addDataSourceProperty("elideSetAutoCommits", "true")
+			addDataSourceProperty("maintainTimeStats", "false")
+
+			// Pool name for monitoring
+			poolName = "AxonHikariPool"
+
+			// Register JMX MBeans for monitoring
+			isRegisterMbeans = true
+		}
+
+		return HikariDataSource(config)
 	}
 
 	@Singleton
-	fun connectionProvider(dataSource: PGSimpleDataSource): ConnectionProvider =
+	fun connectionProvider(dataSource: DataSource): ConnectionProvider =
 		DataSourceConnectionProvider(dataSource)
 
 	@Singleton
