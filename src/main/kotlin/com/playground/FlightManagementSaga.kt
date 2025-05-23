@@ -5,8 +5,8 @@ import org.axonframework.modelling.saga.SagaLifecycle
 import org.axonframework.modelling.saga.StartSaga
 
 class FlightManagementSaga {
-    private var cancelled = false
-    private var delayed = false
+    var cancelled = false
+    var delayed = false
 
     @StartSaga
     @SagaEventHandler(associationProperty = "flightId")

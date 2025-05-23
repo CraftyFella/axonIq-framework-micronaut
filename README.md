@@ -21,6 +21,8 @@ seems you can read the events directly from the event store anyway.
 * ~~Try out sagas~~
 * Why are transactions starting and commiting over and over again? Something todo with the GapTracking
 * Transactions
+* Multi node projections (leadership)
+* Scale out projections (Sharding projections)
 
 ### Transactions TODO
 
