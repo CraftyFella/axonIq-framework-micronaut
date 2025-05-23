@@ -32,7 +32,8 @@ dependencies {
     implementation("org.axonframework:axon-configuration:4.11.2")
     implementation("org.axonframework:axon-server-connector:4.11.2")
 
-    implementation("org.postgresql:postgresql:42.7.1")
+    implementation("com.zaxxer:HikariCP")
+    implementation("org.postgresql:postgresql")
 
     testImplementation("org.axonframework:axon-test:4.11.2")
 }
