@@ -3,3 +3,28 @@ micronaut:
     port: 8082
   application:
     name: axon-cart-mongo
+
+
+otel:
+  register:
+    global: true
+  metric:
+    export:
+      interval: 5000                            # default value
+  experimental:
+    exporter:
+      otlp:
+        retry:
+          enabled: true                         # default value
+  traces:
+    exporter: otlp                              # default value
+    sampler: always_on                          # default value
+  metrics:
+    exporter: otlp                              # default value
+  logs:
+    exporter: otlp                              # default value
+    max-attribute-length: 4095                  # default value
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317           # default value
+      compression: gzip                         # default value

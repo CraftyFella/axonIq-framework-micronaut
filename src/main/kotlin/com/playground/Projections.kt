@@ -43,26 +43,3 @@ class AsyncProjectionWithCustomProcessingGroup {
     }
 }
 
-
-@Singleton
-@ProcessingGroup("other")
-class InLineProjection {
-
-    @EventHandler
-    fun on(event: FlightScheduledEvent) {
-        println("Projection3 Flight scheduled with id: ${event.flightId}")
-    }
-
-    @EventHandler
-    fun on(event: FlightDelayedEvent) {
-        println("Projection3 Flight delayed with id: ${event.flightId}")
-    }
-
-    @EventHandler
-    fun on(event: FlightCancelledEvent) {
-        if (event.flightId == "breaksprojection2") {
-            throw RuntimeException("Projection3 Flight cancelled with id: ${event.flightId}")
-        }
-        println("Projection3 Flight cancelled with id: ${event.flightId}")
-    }
-}
