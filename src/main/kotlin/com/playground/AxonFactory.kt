@@ -26,6 +26,7 @@ import org.axonframework.eventhandling.PropagatingErrorHandler
 import org.axonframework.eventhandling.tokenstore.TokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.JdbcTokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.PostgresTokenTableFactory
+import org.axonframework.eventsourcing.AggregateFactory
 import org.axonframework.eventsourcing.EventCountSnapshotTriggerDefinition
 import org.axonframework.eventsourcing.eventstore.EmbeddedEventStore
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
@@ -178,7 +179,8 @@ class AxonFactory {
         tokenStore: TokenStore,
         sagaStore: SagaStore<Any>,
         spanFactory: SpanFactory,
-        eventStore: EmbeddedEventStore
+        eventStore: EmbeddedEventStore,
+        aggregateFactoryHelper: AggregateFactoryHelper
     ): Configuration {
         val configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
@@ -189,12 +191,20 @@ class AxonFactory {
             }
             .configureCommandBus { _ -> commandBus }
             .configureQueryBus { _ -> queryBus }
-            .configureSerializer { jacksonSerializer() }.configureAggregate(
-                AggregateConfigurer.defaultConfiguration(FlightAggregate::class.java).configureSnapshotTrigger { c ->
-                    EventCountSnapshotTriggerDefinition(
-                        c.snapshotter(), 5
-                    )
-                }).eventProcessing { config ->
+            .configureSerializer { jacksonSerializer() }
+//            .configureAggregate( // TODO: Turn this into automatic discovery using an AggregateAnnotation
+//                AggregateConfigurer
+//                    .defaultConfiguration(FlightAggregate::class.java)
+//                    .configureAggregateFactory { flightAggregateFactory }
+//                    .configureSnapshotTrigger { c ->
+//                    EventCountSnapshotTriggerDefinition(
+//                        c.snapshotter(), 5
+//                    )
+//                })
+            .configureAggregate(
+                aggregateFactoryHelper.createAggregateFactoryFor(FlightAggregate::class.java)
+            )
+            .eventProcessing { config ->
                 config.registerTokenStore { _ -> tokenStore }.registerSagaStore { _ -> sagaStore }
                     .registerSubscribingEventProcessor("other")
                     .registerEventHandler { aysncProjecitonWithStandardProcessingGroup }

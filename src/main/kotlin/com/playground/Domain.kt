@@ -1,5 +1,7 @@
 package com.playground
 
+import io.micronaut.context.annotation.Prototype
+import jakarta.inject.Singleton
 import org.axonframework.commandhandling.CommandHandler
 import org.axonframework.eventsourcing.EventSourcingHandler
 import org.axonframework.modelling.command.AggregateCreationPolicy
@@ -16,9 +18,11 @@ data class FlightScheduledEvent(val flightId: String)
 data class FlightDelayedEvent(val flightId: String)
 data class FlightCancelledEvent(val flightId: String)
 
-class FlightAggregate(@AggregateIdentifier var aggregateId: String? = null) {
+@Prototype
+class FlightAggregate() {
 
     var cancelled: Boolean = false
+    @AggregateIdentifier var aggregateId: String? = null
 
     @CommandHandler
     @CreationPolicy(AggregateCreationPolicy.CREATE_IF_MISSING)
