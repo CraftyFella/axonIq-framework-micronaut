@@ -19,6 +19,7 @@ seems you can read the events directly from the event store anyway.
 * ~~Streaming event processor (background thread)~~
 * ~~Try out snapshots~~
 * ~~Try out sagas~~
+* Try out inline projection in the spring boot version of the code to see if the transaction works and rolls back the event store write.
 * Why are transactions starting and commiting over and over again? Something todo with the GapTracking
 * Transactions
 * Multi node projections (leadership)

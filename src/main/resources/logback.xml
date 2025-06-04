@@ -8,8 +8,16 @@
         </encoder>
     </appender>
 
-    <logger name ="org.axonframework" level="debug" />
-    <root level="info">
+<!--    <logger name ="org.axonframework" level="info" />-->
+<!--    <logger name ="com.playground" level="info" />-->
+<!--    <logger name ="org.postgresql" level="info" />-->
+<!--    <logger name ="com.zaxxer.hikari.pool.PoolBase" level="info" />-->
+<!--    <logger name ="org.axonframework.messaging.unitofwork" level="debug" />-->
+
+    <logger name="org.axonframework.messaging.unitofwork.AbstractUnitOfWork" level="DEBUG"/>
+        <logger name="com.playground.UnitOfWorkAwareTransactionManager" level="DEBUG"/>
+
+    <root level="ERROR">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>

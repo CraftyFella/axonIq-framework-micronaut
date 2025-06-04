@@ -18,6 +18,7 @@ repositories {
 dependencies {
     ksp("io.micronaut:micronaut-http-validation")
     ksp("io.micronaut.serde:micronaut-serde-processor")
+    ksp("io.micronaut.tracing:micronaut-tracing-annotation")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
@@ -29,8 +30,16 @@ dependencies {
     testImplementation("io.micronaut:micronaut-http-client")
     runtimeOnly("org.yaml:snakeyaml")
 
+
+    implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry-http")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+
+
+
     implementation("org.axonframework:axon-configuration:4.11.2")
     implementation("org.axonframework:axon-server-connector:4.11.2")
+    implementation("org.axonframework:axon-tracing-opentelemetry:4.11.2")
+
 
     implementation("com.zaxxer:HikariCP")
     implementation("org.postgresql:postgresql")
