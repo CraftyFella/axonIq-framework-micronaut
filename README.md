@@ -20,6 +20,10 @@ seems you can read the events directly from the event store anyway.
 * ~~Try out snapshots~~
 * ~~Try out sagas~~
 * ~~Transactions~~
+* ~~Micronaut Aggregate Factory~~
+* Auto Scanning Aggregate Factory
+* Transaction Manager playing nicely with Micronaut data
+* Micronaut Saga Factory
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
 * Load Test
