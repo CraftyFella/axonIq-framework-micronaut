@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   aspire-dashboard:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.2
     container_name: aspire-dashboard
     environment:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
