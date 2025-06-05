@@ -1,4 +1,4 @@
-package com.playground.Autowire
+package com.playground.autowire
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -41,7 +41,7 @@ import org.axonframework.tracing.SpanFactory
 import org.axonframework.tracing.opentelemetry.OpenTelemetrySpanFactory
 
 @Factory
-class AxonFactory {
+class AxonFactory() {
 
     @Singleton
     fun tokenStore(connectionProvider: ConnectionProvider): TokenStore {
@@ -72,10 +72,11 @@ class AxonFactory {
     }
 
     @Singleton
-    fun commandBus(spanFactory: SpanFactory, transactionManager: TransactionManager): CommandBus = SimpleCommandBus.builder()
-        .rollbackConfiguration(RollbackConfigurationType.ANY_THROWABLE)
-        .spanFactory(spanFactory)
-        .transactionManager(transactionManager).build()
+    fun commandBus(spanFactory: SpanFactory, transactionManager: TransactionManager): CommandBus =
+        SimpleCommandBus.builder()
+            .rollbackConfiguration(RollbackConfigurationType.ANY_THROWABLE)
+            .spanFactory(spanFactory)
+            .transactionManager(transactionManager).build()
 
     @Singleton
     fun queryBus(spanFactory: SpanFactory, transactionManager: TransactionManager): QueryBus {
@@ -142,25 +143,14 @@ class AxonFactory {
             .configureCommandBus { _ -> commandBus }
             .configureQueryBus { _ -> queryBus }
             .configureSerializer { jacksonSerializer() }
-//            .configureAggregate( // TODO: Turn this into automatic discovery using an AggregateAnnotation
-//                AggregateConfigurer
-//                    .defaultConfiguration(FlightAggregate::class.java)
-//                    .configureAggregateFactory { flightAggregateFactory }
-//                    .configureSnapshotTrigger { c ->
-//                    EventCountSnapshotTriggerDefinition(
-//                        c.snapshotter(), 5
-//                    )
-//                })
-            .configureAggregate(
-                aggregateFactoryHelper.createAggregateFactoryFor(FlightAggregate::class.java)
-            )
+            .configureAggregate(aggregateFactoryHelper.createAggregateFactoryFor(FlightAggregate::class.java))
             .eventProcessing { config ->
                 config.registerTokenStore { _ -> tokenStore }.registerSagaStore { _ -> sagaStore }
-                    .registerSubscribingEventProcessor("other")
+                    .registerSubscribingEventProcessor(InLineProjection.NAME)
                     .registerEventHandler { aysncProjecitonWithStandardProcessingGroup }
                     .registerEventHandler { asyncProjectionWithCustomProcessingGroup }
                     .registerEventHandler { inLineProjection }
-                    .registerListenerInvocationErrorHandler("other", { PropagatingErrorHandler.INSTANCE })
+                    .registerListenerInvocationErrorHandler(InLineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerSaga(FlightManagementSaga::class.java)
             }
 

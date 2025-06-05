@@ -1,4 +1,4 @@
-package com.playground.Autowire
+package com.playground.autowire
 
 import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
