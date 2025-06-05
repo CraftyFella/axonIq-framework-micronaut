@@ -1,6 +1,8 @@
 package com.playground
 
 import io.micronaut.context.annotation.Prototype
+import io.micronaut.tracing.annotation.NewSpan
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.axonframework.commandhandling.CommandHandler
 import org.axonframework.eventsourcing.EventSourcingHandler
@@ -18,8 +20,20 @@ data class FlightScheduledEvent(val flightId: String)
 data class FlightDelayedEvent(val flightId: String)
 data class FlightCancelledEvent(val flightId: String)
 
+@Singleton
+open class Thing {
+    @NewSpan
+    open fun doSomething() {
+        println("Doing something in Thing")
+    }
+}
+
 @Prototype
-class FlightAggregate() {
+open class FlightAggregate() {
+
+    @Inject
+    @Transient
+    private lateinit var thing: Thing
 
     var cancelled: Boolean = false
     @AggregateIdentifier var aggregateId: String? = null
@@ -47,7 +61,8 @@ class FlightAggregate() {
 
     @CommandHandler
     @CreationPolicy(AggregateCreationPolicy.NEVER)
-    fun handle(command: DelayFlightCommand): String {
+    @NewSpan
+    open fun handle(command: DelayFlightCommand): String {
         if (cancelled) {
             throw IllegalStateException("Flight already cancelled")
         }
@@ -62,7 +77,8 @@ class FlightAggregate() {
     }
 
     @EventSourcingHandler
-    fun on(event: FlightDelayedEvent) {
+    open fun on(event: FlightDelayedEvent) {
+        thing.doSomething()
         println("EventSourcingHandler Flight delay with id: ${event.flightId}")
     }
 

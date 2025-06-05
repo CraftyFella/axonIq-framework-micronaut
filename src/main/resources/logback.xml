@@ -15,7 +15,7 @@
 <!--    <logger name ="org.axonframework.messaging.unitofwork" level="debug" />-->
 
     <logger name="org.axonframework.messaging.unitofwork.AbstractUnitOfWork" level="DEBUG"/>
-        <logger name="com.playground.UnitOfWorkAwareTransactionManager" level="DEBUG"/>
+        <logger name="com.playground.Autowire.UnitOfWorkAwareTransactionManager" level="DEBUG"/>
 
     <root level="ERROR">
         <appender-ref ref="STDOUT" />
