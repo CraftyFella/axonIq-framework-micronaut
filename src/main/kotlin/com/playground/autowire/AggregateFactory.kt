@@ -1,4 +1,4 @@
-package com.playground.Autowire
+package com.playground.autowire
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.BeanContext

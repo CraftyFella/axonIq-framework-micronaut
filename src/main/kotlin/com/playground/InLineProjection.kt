@@ -1,17 +1,21 @@
 package com.playground
 
+import com.playground.InLineProjection.Companion.NAME
 import io.micronaut.tracing.annotation.NewSpan
 import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.config.ProcessingGroup
 import org.axonframework.eventhandling.EventHandler
-import org.axonframework.messaging.interceptors.ExceptionHandler
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 
 @Singleton
-@ProcessingGroup("other")
+@ProcessingGroup(NAME)
 open class InLineProjection(private val connectionProvider: ConnectionProvider) {
+
+    companion object {
+        const val NAME = "inline-projection"
+    }
 
     private val logger = LoggerFactory.getLogger(InLineProjection::class.java)
 
