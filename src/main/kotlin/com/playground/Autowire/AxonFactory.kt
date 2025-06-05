@@ -1,11 +1,14 @@
-package com.playground
+package com.playground.Autowire
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
+import com.playground.AsyncProjectionWithCustomProcessingGroup
+import com.playground.AysncProjecitonWithStandardProcessingGroup
+import com.playground.FlightAggregate
+import com.playground.FlightManagementSaga
+import com.playground.InLineProjection
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
@@ -16,18 +19,13 @@ import org.axonframework.commandhandling.CommandBus
 import org.axonframework.commandhandling.SimpleCommandBus
 import org.axonframework.commandhandling.gateway.CommandGateway
 import org.axonframework.common.jdbc.ConnectionProvider
-import org.axonframework.common.jdbc.DataSourceConnectionProvider
-import org.axonframework.common.jdbc.UnitOfWorkAwareConnectionProviderWrapper
 import org.axonframework.common.transaction.TransactionManager
-import org.axonframework.config.AggregateConfigurer
 import org.axonframework.config.Configuration
 import org.axonframework.config.DefaultConfigurer
 import org.axonframework.eventhandling.PropagatingErrorHandler
 import org.axonframework.eventhandling.tokenstore.TokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.JdbcTokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.PostgresTokenTableFactory
-import org.axonframework.eventsourcing.AggregateFactory
-import org.axonframework.eventsourcing.EventCountSnapshotTriggerDefinition
 import org.axonframework.eventsourcing.eventstore.EmbeddedEventStore
 import org.axonframework.eventsourcing.eventstore.EventStorageEngine
 import org.axonframework.eventsourcing.eventstore.jdbc.JdbcEventStorageEngine
@@ -41,54 +39,9 @@ import org.axonframework.queryhandling.SimpleQueryBus
 import org.axonframework.serialization.json.JacksonSerializer
 import org.axonframework.tracing.SpanFactory
 import org.axonframework.tracing.opentelemetry.OpenTelemetrySpanFactory
-import javax.sql.DataSource
 
 @Factory
 class AxonFactory {
-
-    @Singleton
-    fun dataSource(): DataSource {
-        val config = HikariConfig().apply {
-            jdbcUrl = "jdbc:postgresql://localhost:5432/axon_eventstore"
-            username = "postgres"
-            password = "password"
-            driverClassName = "org.postgresql.Driver"
-
-            // Connection pool settings
-            maximumPoolSize = 20
-            minimumIdle = 5
-            connectionTimeout = 30000 // 30 seconds
-            idleTimeout = 600000 // 10 minutes
-            maxLifetime = 1800000 // 30 minutes
-            leakDetectionThreshold = 60000 // 60 seconds
-
-            // PostgreSQL specific optimizations
-            addDataSourceProperty("cachePrepStmts", "true")
-            addDataSourceProperty("prepStmtCacheSize", "250")
-            addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
-            addDataSourceProperty("useServerPrepStmts", "true")
-            addDataSourceProperty("useLocalSessionState", "true")
-            addDataSourceProperty("rewriteBatchedStatements", "true")
-            addDataSourceProperty("cacheResultSetMetadata", "true")
-            addDataSourceProperty("cacheServerConfiguration", "true")
-            addDataSourceProperty("elideSetAutoCommits", "true")
-            addDataSourceProperty("maintainTimeStats", "false")
-
-            // Pool name for monitoring
-            poolName = "AxonHikariPool"
-
-            // Register JMX MBeans for monitoring
-            isRegisterMbeans = true
-        }
-
-        return HikariDataSource(config)
-    }
-
-    @Singleton
-    fun connectionProvider(dataSource: DataSource): ConnectionProvider =
-        UnitOfWorkAwareConnectionProviderWrapper(
-            DataSourceConnectionProvider(dataSource)
-        )
 
     @Singleton
     fun tokenStore(connectionProvider: ConnectionProvider): TokenStore {
@@ -99,11 +52,6 @@ class AxonFactory {
         tokenStore.createSchema(PostgresTokenTableFactory.INSTANCE)
 
         return tokenStore
-    }
-
-    @Singleton
-    fun transactionManager(connectionProvider: ConnectionProvider): TransactionManager {
-        return UnitOfWorkAwareTransactionManager(connectionProvider)
     }
 
     @Singleton
@@ -141,7 +89,9 @@ class AxonFactory {
         val serializer = jacksonSerializer()
 
         val sagaStore =
-            JdbcSagaStore.builder().connectionProvider(connectionProvider).sqlSchema(PostgresSagaSqlSchema())
+            JdbcSagaStore.builder()
+                .connectionProvider(connectionProvider)
+                .sqlSchema(PostgresSagaSqlSchema())
                 .serializer(serializer).build()
 
         // Create the saga store schema
@@ -240,4 +190,3 @@ class AxonFactory {
     }
 
 }
-
