@@ -133,7 +133,7 @@ class AxonFactory() {
         spanFactory: SpanFactory,
         eventStore: EmbeddedEventStore,
         aggregateFactoryHelper: MicronautAggregateConfigurer,
-        beanContext: BeanContext
+        micronautResourceInjector: MicronautResourceInjector
     ): Configuration {
         val configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
@@ -144,6 +144,7 @@ class AxonFactory() {
             .configureCommandBus { _ -> commandBus }
             .configureQueryBus { _ -> queryBus }
             .configureSerializer { jacksonSerializer() }
+            .configureResourceInjector { micronautResourceInjector }
             .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregate::class.java))
             .eventProcessing { config ->
                 config
@@ -155,17 +156,6 @@ class AxonFactory() {
                     .registerEventHandler { inLineProjection }
                     .registerListenerInvocationErrorHandler(InLineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerSaga(FlightManagementSaga::class.java)
-//                    .registerSaga(FlightManagementSaga::class.java) { sagaConfig ->
-//                        sagaConfig.configureSagaManager { config ->
-//                            AnnotatedSagaManager.builder<FlightManagementSaga>()
-//                                .spanFactory(spanFactory)
-//                                //.sagaRepository(config.getComponent(SagaRepository::class.java))
-//                                .sagaType(FlightManagementSaga::class.java)
-//                                .sagaFactory { beanContext.getBean(FlightManagementSaga::class.java) }
-//                                .build()
-//                        }
-//                    }
-
             }
 
         return configurer.buildConfiguration()
