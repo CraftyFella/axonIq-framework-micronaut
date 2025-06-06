@@ -116,7 +116,7 @@ open class MicronautAggregateFactory<T>(
 
 // Helper class for programmatic registration
 @Singleton
-class AggregateFactoryHelper(
+class MicronautAggregateConfigurer(
     private val beanContext: BeanContext
 ) {
 
@@ -124,7 +124,7 @@ class AggregateFactoryHelper(
      * Creates and registers an AggregateFactory for the given aggregate type,
      * then returns a configured AggregateConfigurer
      */
-    fun <T> createAggregateFactoryFor(
+    fun <T> configurationFor(
         aggregateType: Class<T>,
         snapshotTriggerThreshold: Int = 5
     ): AggregateConfigurer<T> {

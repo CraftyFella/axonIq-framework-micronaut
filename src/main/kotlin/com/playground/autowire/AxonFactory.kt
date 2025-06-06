@@ -9,6 +9,7 @@ import com.playground.AysncProjecitonWithStandardProcessingGroup
 import com.playground.FlightAggregate
 import com.playground.FlightManagementSaga
 import com.playground.InLineProjection
+import io.micronaut.context.BeanContext
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
@@ -122,7 +123,7 @@ class AxonFactory() {
 
     @Singleton
     fun configuration(
-        aysncProjecitonWithStandardProcessingGroup: AysncProjecitonWithStandardProcessingGroup,
+        asyncProjectionWithStandardProcessingGroup: AysncProjecitonWithStandardProcessingGroup,
         asyncProjectionWithCustomProcessingGroup: AsyncProjectionWithCustomProcessingGroup,
         inLineProjection: InLineProjection,
         commandBus: CommandBus,
@@ -131,27 +132,40 @@ class AxonFactory() {
         sagaStore: SagaStore<Any>,
         spanFactory: SpanFactory,
         eventStore: EmbeddedEventStore,
-        aggregateFactoryHelper: AggregateFactoryHelper
+        aggregateFactoryHelper: MicronautAggregateConfigurer,
+        beanContext: BeanContext
     ): Configuration {
         val configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
             .configureEventStore { c ->
-
                 c.onShutdown { eventStore.shutDown() }
                 eventStore
             }
             .configureCommandBus { _ -> commandBus }
             .configureQueryBus { _ -> queryBus }
             .configureSerializer { jacksonSerializer() }
-            .configureAggregate(aggregateFactoryHelper.createAggregateFactoryFor(FlightAggregate::class.java))
+            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregate::class.java))
             .eventProcessing { config ->
-                config.registerTokenStore { _ -> tokenStore }.registerSagaStore { _ -> sagaStore }
+                config
+                    .registerTokenStore { _ -> tokenStore }
+                    .registerSagaStore { _ -> sagaStore }
                     .registerSubscribingEventProcessor(InLineProjection.NAME)
-                    .registerEventHandler { aysncProjecitonWithStandardProcessingGroup }
+                    .registerEventHandler { asyncProjectionWithStandardProcessingGroup }
                     .registerEventHandler { asyncProjectionWithCustomProcessingGroup }
                     .registerEventHandler { inLineProjection }
                     .registerListenerInvocationErrorHandler(InLineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerSaga(FlightManagementSaga::class.java)
+//                    .registerSaga(FlightManagementSaga::class.java) { sagaConfig ->
+//                        sagaConfig.configureSagaManager { config ->
+//                            AnnotatedSagaManager.builder<FlightManagementSaga>()
+//                                .spanFactory(spanFactory)
+//                                //.sagaRepository(config.getComponent(SagaRepository::class.java))
+//                                .sagaType(FlightManagementSaga::class.java)
+//                                .sagaFactory { beanContext.getBean(FlightManagementSaga::class.java) }
+//                                .build()
+//                        }
+//                    }
+
             }
 
         return configurer.buildConfiguration()
