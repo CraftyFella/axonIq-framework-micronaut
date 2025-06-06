@@ -23,9 +23,12 @@ data class FlightCancelledEvent(val flightId: String)
 
 @Singleton
 open class Thing {
+    companion object {
+        val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(Thing::class.java)
+    }
     @NewSpan
     open fun doSomething() {
-        println("Doing something in Thing")
+        log.debug("Doing something in Thing")
     }
 }
 
@@ -34,6 +37,10 @@ class FlightAggregate() {
     @Inject
     @Transient
     private lateinit var thing: Thing
+
+    companion object {
+        val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(FlightAggregate::class.java)
+    }
 
     var cancelled: Boolean = false
     @AggregateIdentifier var aggregateId: String? = null
@@ -72,19 +79,19 @@ class FlightAggregate() {
     @EventSourcingHandler
     fun on(event: FlightScheduledEvent) {
         this.aggregateId = event.flightId
-        println("EventSourcingHandler Flight scheduled with id: ${event.flightId}")
+        log.debug("EventSourcingHandler Flight scheduled with id: ${event.flightId}")
     }
 
     @EventSourcingHandler
     open fun on(event: FlightDelayedEvent) {
         thing.doSomething()
-        println("EventSourcingHandler Flight delay with id: ${event.flightId}")
+        log.debug("EventSourcingHandler Flight delay with id: ${event.flightId}")
     }
 
     @EventSourcingHandler
     fun on(event: FlightCancelledEvent) {
         this.cancelled = true
-        println("EventSourcingHandler Flight cancel with id: ${event.flightId}")
+        log.debug("EventSourcingHandler Flight cancel with id: ${event.flightId}")
     }
 
 }

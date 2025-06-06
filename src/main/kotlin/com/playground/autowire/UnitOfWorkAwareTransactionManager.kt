@@ -5,6 +5,7 @@ import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.transaction.Transaction
 import org.axonframework.common.transaction.TransactionManager
 import org.axonframework.messaging.unitofwork.CurrentUnitOfWork
+import org.axonframework.messaging.unitofwork.UnitOfWork
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 
@@ -12,12 +13,17 @@ import java.sql.Connection
 class UnitOfWorkAwareTransactionManager(private val connectionProvider: ConnectionProvider) : TransactionManager {
 
 	override fun startTransaction(): Transaction {
-		val connection = connectionProvider.connection.apply { autoCommit = false }
-		return if (CurrentUnitOfWork.isStarted()) {
-			// No transaction, as the Rollback and Commit are controlled by the unit of work
-			NoTransaction()
-		} else {
+
+		return if (!CurrentUnitOfWork.isStarted() || CurrentUnitOfWork.get().phase()
+				.isAfter(UnitOfWork.Phase.PREPARE_COMMIT)
+		) {
+			val connection = connectionProvider.connection
 			JdbcConnectionTransaction(connection)
+		}
+		else {
+			val connection = connectionProvider.connection
+			connection.autoCommit = false
+			NoTransaction()
 		}
 	}
 

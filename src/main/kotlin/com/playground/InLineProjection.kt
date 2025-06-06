@@ -43,7 +43,7 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
 
     @EventHandler
     fun on(event: FlightScheduledEvent) {
-        println("Projection3 Flight scheduled with id: ${event.flightId}")
+        logger.debug("Projection3 Flight scheduled with id: ${event.flightId}")
 
 
             upsertFlight(event.flightId, 0, false, 0)
@@ -53,7 +53,7 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
     @EventHandler
     @NewSpan
     open fun on(event: FlightDelayedEvent) {
-        println("Projection3 Flight delayed with id: ${event.flightId}")
+        logger.debug("Projection3 Flight delayed with id: ${event.flightId}")
 
 
 
@@ -72,7 +72,7 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
         if (event.flightId == "breaksprojection2") {
             throw RuntimeException("Projection3 Flight cancelled with id: ${event.flightId}")
         }
-        println("Projection3 Flight cancelled with id: ${event.flightId}")
+        logger.debug("Projection3 Flight cancelled with id: ${event.flightId}")
 
         //transactionManager.executeInTransaction {
 
@@ -107,17 +107,17 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
 
     private fun upsertFlight(flightId: String, delayCount: Int, cancelled: Boolean, version: Long) {
         val sql = """
-            INSERT INTO flights (id, delay_count, cancelled, version) 
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT (id) 
-            DO UPDATE SET 
-                delay_count = ?, 
-                cancelled = ?,
-                version = ?
-        """
+        INSERT INTO flights (id, delay_count, cancelled, version)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT (id)
+        DO UPDATE SET
+            delay_count = ?,
+            cancelled = ?,
+            version = ?
+    """
 
-
-        connectionProvider.connection.prepareStatement(sql).use { ps ->
+        connectionProvider.connection.use { connection ->
+            connection.prepareStatement(sql).use { ps ->
                 // Parameters for INSERT
                 ps.setString(1, flightId)
                 ps.setInt(2, delayCount)
@@ -131,8 +131,9 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
 
                 ps.executeUpdate()
                 logger.debug("Flight {} updated: delays={}, cancelled={}, version={}",
-                            flightId, delayCount, cancelled, version)
+                    flightId, delayCount, cancelled, version)
             }
         }
+    }
 
 }
