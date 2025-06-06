@@ -9,6 +9,7 @@ import org.axonframework.eventsourcing.EventSourcingHandler
 import org.axonframework.modelling.command.AggregateCreationPolicy
 import org.axonframework.modelling.command.AggregateIdentifier
 import org.axonframework.modelling.command.AggregateLifecycle
+import org.axonframework.modelling.command.AggregateRoot
 import org.axonframework.modelling.command.CreationPolicy
 import org.axonframework.modelling.command.TargetAggregateIdentifier
 
@@ -28,8 +29,7 @@ open class Thing {
     }
 }
 
-@Prototype
-open class FlightAggregate() {
+class FlightAggregate() {
 
     @Inject
     @Transient
@@ -61,8 +61,7 @@ open class FlightAggregate() {
 
     @CommandHandler
     @CreationPolicy(AggregateCreationPolicy.NEVER)
-    @NewSpan
-    open fun handle(command: DelayFlightCommand): String {
+    fun handle(command: DelayFlightCommand): String {
         if (cancelled) {
             throw IllegalStateException("Flight already cancelled")
         }
