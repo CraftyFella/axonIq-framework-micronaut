@@ -9,26 +9,30 @@ class FlightManagementSaga {
     var cancelled = false
     var delayed = false
 
+    companion object {
+        val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(FlightManagementSaga::class.java)
+    }
+
     @Inject
     private lateinit var thing: Thing
 
     @StartSaga
     @SagaEventHandler(associationProperty = "flightId")
     fun handle(event: FlightScheduledEvent?) {
-        println("Saga Flight scheduled: ${event?.flightId}")
+        log.debug("Saga Flight scheduled: ${event?.flightId}")
     }
 
     @SagaEventHandler(associationProperty = "flightId")
     fun handle(event: FlightDelayedEvent?) {
         delayed = true
         thing.doSomething() // Example usage of injected dependency
-        println("Saga FlightDelayedEvent: ${event?.flightId}")
+        log.debug("Saga FlightDelayedEvent: ${event?.flightId}")
     }
 
     @SagaEventHandler(associationProperty = "flightId")
     fun handle(event: FlightCancelledEvent?) {
         cancelled = true
-        println("Saga FlightCancelledEvent: ${event?.flightId}")
+        log.debug("Saga FlightCancelledEvent: ${event?.flightId}")
         SagaLifecycle.end()
     }
 }

@@ -21,9 +21,10 @@ seems you can read the events directly from the event store anyway.
 * ~~Try out sagas~~
 * ~~Transactions~~
 * ~~Micronaut Aggregate Factory~~
+* ~~Micronaut Saga Factory~~
+* Fix connection leak, after 20 requires the pool is exhausted, check the 
 * Auto Scanning Aggregate Factory
 * Transaction Manager playing nicely with Micronaut data
-* Micronaut Saga Factory
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
 * Load Test
