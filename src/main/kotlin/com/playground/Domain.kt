@@ -133,19 +133,8 @@ class FlightAggregate() {
     }
 
     @EventSourcingHandler
-    fun on(event: FlightEvent.FlightScheduledEvent) {
+    fun on(event: FlightEvent) {
         this.aggregateId = event.flightId
-        this.state = this.state.evolve(event)
-    }
-
-    @EventSourcingHandler
-    fun on(event: FlightEvent.FlightDelayedEvent) {
-        thing.doSomething()
-        this.state = this.state.evolve(event)
-    }
-
-    @EventSourcingHandler
-    fun on(event: FlightEvent.FlightCancelledEvent) {
         this.state = this.state.evolve(event)
     }
 
@@ -156,28 +145,19 @@ class FlightAggregate() {
 class FlightDeciderAggregateFirstAttempt() {
     var state: FlightState = FlightState.Empty
     @AggregateIdentifier var aggregateId: String? = null
-    val decider = FlightDecider()
+
 
     @CommandHandler
     @CreationPolicy(AggregateCreationPolicy.CREATE_IF_MISSING)
     fun handle(command: FlightCommand): String {
-        val events = decider.decide(state, command)
+        val events = decide(state, command)
         events.forEach { event ->
             AggregateLifecycle.apply(event)
         }
         return events.toString()
     }
 
-    @EventSourcingHandler
-    fun on(event: FlightEvent) {
-        this.aggregateId = event.flightId
-        this.state = this.state.evolve(event)
-    }
-}
-
-class FlightDecider {
-
-    fun decide(state: FlightState, command: FlightCommand): List<FlightEvent> {
+    private fun decide(state: FlightState, command: FlightCommand): List<FlightEvent> {
         return when (command) {
             is FlightCommand.ScheduleFlightCommand -> handle(state, command)
             is FlightCommand.DelayFlightCommand -> handle(state, command)
@@ -215,7 +195,14 @@ class FlightDecider {
         }
         return listOf(FlightEvent.FlightCancelledEvent(command.flightId, command.reason))
     }
+
+    @EventSourcingHandler
+    fun on(event: FlightEvent) {
+        this.aggregateId = event.flightId
+        this.state = this.state.evolve(event)
+    }
 }
+
 
 abstract class DeciderAggregate<TState, TCommand, TEvent> {
     protected abstract var state: TState
@@ -426,5 +413,4 @@ class FlightDeciderAggregate2 : DeciderAggregate2<FlightState, FlightCommand, Fl
     override fun on(event: FlightEvent) {
         handleEvent(event)
     }
-
 }

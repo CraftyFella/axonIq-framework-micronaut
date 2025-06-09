@@ -33,10 +33,15 @@ class FlightController(private val commandGateway: CommandGateway) {
 	private fun randomAirport() = airports[Random.nextInt(airports.size)]
 	private fun randomFlightNumber() = "FL${Random.nextInt(1000, 9999)}"
 
-	private fun <T> sendCommand(command: T): String {
-		val commandMessage = GenericCommandMessage(GenericMessage<T?>(command, MetaData.emptyInstance()), FlightCommand::class.java.name)
+	private fun <T> sendCommandAsSumType(command: T, clazz: Class<T>): String {
+		val commandMessage = GenericCommandMessage(GenericMessage<T?>(command, MetaData.emptyInstance()), clazz.name)
 		val result: Any = commandGateway.sendAndWait(commandMessage)
 		return result.toString()
+	}
+
+	private fun sendCommand(command: FlightCommand): String {
+		val result: String = commandGateway.sendAndWait(command)
+		return result
 	}
 
 	@Get("{flightId}/schedule")
