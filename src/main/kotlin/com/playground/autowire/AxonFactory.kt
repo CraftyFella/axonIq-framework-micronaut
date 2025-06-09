@@ -6,9 +6,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.playground.AsyncProjectionWithCustomProcessingGroup
 import com.playground.AysncProjecitonWithStandardProcessingGroup
-import com.playground.FlightDeciderAggregate
-import com.playground.FlightDeciderAggregate2
-import com.playground.FlightDeciderAggregateFirstAttempt
+import com.playground.FlightAggregate
 import com.playground.FlightManagementSaga
 import com.playground.InLineProjection
 import io.micronaut.context.annotation.Factory
@@ -146,7 +144,7 @@ class AxonFactory() {
             .configureQueryBus { _ -> queryBus }
             .configureSerializer { jacksonSerializer() }
             .configureResourceInjector { micronautResourceInjector }
-            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightDeciderAggregate2::class.java))
+            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregate::class.java))
             .eventProcessing { config ->
                 config
                     .registerTokenStore { _ -> tokenStore }
