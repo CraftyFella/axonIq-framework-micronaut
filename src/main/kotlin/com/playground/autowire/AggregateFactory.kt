@@ -14,12 +14,14 @@ open class MicronautAggregateFactory<T>(
 
     init {
         // Check if the aggregate type has a scope (singleton, prototype, etc.)
-        val beanDefinition = beanContext.getBeanDefinition(aggregateType)
-        if (beanDefinition != null && beanDefinition.isSingleton() || hasScopeAnnotation(beanDefinition)) {
-            throw IllegalStateException(
-                "Aggregate ${aggregateType.simpleName} should not be a scoped bean " +
-                        "(singleton, prototype, etc). Remove scope annotations but keep @Inject for constructor injection."
-            )
+        val beanDefinitionOption = beanContext.findBeanDefinition(aggregateType)
+        beanDefinitionOption.ifPresent { beanDefinition ->
+            if (beanDefinition.isSingleton() || hasScopeAnnotation(beanDefinition)) {
+                throw IllegalStateException(
+                    "Aggregate ${aggregateType.simpleName} should not be a scoped bean " +
+                            "(singleton, prototype, etc). Remove scope annotations but keep @Inject for constructor injection."
+                )
+            }
         }
     }
 
