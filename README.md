@@ -14,13 +14,14 @@
 * ~~Micronaut Saga Factory~~
 * ~~Fix connection leak~~
 * ~~Decider concepts~~
-
+* ~~Have IO in the streaming projections~~
+  * ~~Scheduled Flights by Origin~~
+  * ~~Scheduled Flights by Destination~~
+  * ~~Flights delay count and status~~
+  
 ### To Do
 
-* Have IO in the streaming projections
-   * Scheduled Flights by Origin
-   * Scheduled Flights by Destination
-   * Flights and their Status
+* Query handlers for the projections.
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
 * Replay projections (streaming)

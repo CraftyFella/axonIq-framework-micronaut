@@ -39,10 +39,10 @@ class FlightController(private val commandGateway: CommandGateway) {
 		return result.toString()
 	}
 
-	private fun sendCommand(command: FlightCommand): String {
-		val result: String = commandGateway.sendAndWait(command)
-		return result
-	}
+//	private fun sendCommand(command: FlightCommand): String {
+//		val result: String = commandGateway.sendAndWait(command)
+//		return result
+//	}
 
 	@Get("{flightId}/schedule")
 	fun flight(flightId: String): String {
@@ -58,7 +58,7 @@ class FlightController(private val commandGateway: CommandGateway) {
 			origin = origin,
 			destination = destination
 		)
-		return sendCommand(command)
+		return sendCommandAsSumType(command, FlightCommand::class.java)
 	}
 
 	@Get("{flightId}/delay/")
@@ -68,7 +68,7 @@ class FlightController(private val commandGateway: CommandGateway) {
 			flightId = flightId,
 			reason = reason
 		)
-		return sendCommand(command)
+		return sendCommandAsSumType(command, FlightCommand::class.java)
 	}
 
 	@Get("{flightId}/cancel/")
@@ -78,6 +78,6 @@ class FlightController(private val commandGateway: CommandGateway) {
 			flightId = flightId,
 			reason = reason
 		)
-		return sendCommand(command)
+		return sendCommandAsSumType(command, FlightCommand::class.java)
 	}
 }

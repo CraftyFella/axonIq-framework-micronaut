@@ -4,11 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.playground.AsyncProjectionWithCustomProcessingGroup
-import com.playground.AysncProjecitonWithStandardProcessingGroup
 import com.playground.FlightAggregate
+import com.playground.FlightDeciderAggregate2
 import com.playground.FlightManagementSaga
 import com.playground.InLineProjection
+import com.playground.ScheduledFlightsByDestinationProjection
+import com.playground.ScheduledFlightsByOriginProjection
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
@@ -122,8 +123,8 @@ class AxonFactory() {
 
     @Singleton
     fun configuration(
-        asyncProjectionWithStandardProcessingGroup: AysncProjecitonWithStandardProcessingGroup,
-        asyncProjectionWithCustomProcessingGroup: AsyncProjectionWithCustomProcessingGroup,
+        scheduledFlightsByOriginProjection: ScheduledFlightsByOriginProjection,
+        scheduledFlightsByDestinationProjection: ScheduledFlightsByDestinationProjection,
         inLineProjection: InLineProjection,
         commandBus: CommandBus,
         queryBus: QueryBus,
@@ -144,14 +145,14 @@ class AxonFactory() {
             .configureQueryBus { _ -> queryBus }
             .configureSerializer { jacksonSerializer() }
             .configureResourceInjector { micronautResourceInjector }
-            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregate::class.java))
+            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightDeciderAggregate2::class.java))
             .eventProcessing { config ->
                 config
                     .registerTokenStore { _ -> tokenStore }
                     .registerSagaStore { _ -> sagaStore }
                     .registerSubscribingEventProcessor(InLineProjection.NAME)
-                    .registerEventHandler { asyncProjectionWithStandardProcessingGroup }
-                    .registerEventHandler { asyncProjectionWithCustomProcessingGroup }
+                    .registerEventHandler { scheduledFlightsByOriginProjection }
+                    .registerEventHandler { scheduledFlightsByDestinationProjection }
                     .registerEventHandler { inLineProjection }
                     .registerListenerInvocationErrorHandler(InLineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerSaga(FlightManagementSaga::class.java)
