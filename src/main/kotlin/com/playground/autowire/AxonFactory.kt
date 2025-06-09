@@ -9,7 +9,6 @@ import com.playground.AysncProjecitonWithStandardProcessingGroup
 import com.playground.FlightAggregate
 import com.playground.FlightManagementSaga
 import com.playground.InLineProjection
-import io.micronaut.context.BeanContext
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
