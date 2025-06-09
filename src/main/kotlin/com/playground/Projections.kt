@@ -13,17 +13,17 @@ class AysncProjecitonWithStandardProcessingGroup {
     }
 
     @EventHandler
-    fun on(event: FlightScheduledEvent) {
+    fun on(event: FlightEvent.FlightScheduledEvent) {
         log.debug("Projection1 Flight scheduled with id: ${event.flightId}")
     }
 
     @EventHandler
-    fun on(event: FlightDelayedEvent) {
+    fun on(event: FlightEvent.FlightDelayedEvent) {
         log.debug("Projection1 Flight delayed with id: ${event.flightId}")
     }
 
     @EventHandler
-    fun on(event: FlightCancelledEvent) {
+    fun on(event: FlightEvent.FlightCancelledEvent) {
         log.debug("Projection1 Flight cancelled with id: ${event.flightId}")
     }
 }
@@ -37,17 +37,17 @@ class AsyncProjectionWithCustomProcessingGroup {
     }
 
     @EventHandler
-    fun on(event: FlightScheduledEvent) {
+    fun on(event: FlightEvent.FlightScheduledEvent) {
         log.debug("Projection2 Flight scheduled with id: ${event.flightId}")
     }
 
     @EventHandler
-    fun on(event: FlightDelayedEvent) {
+    fun on(event: FlightEvent.FlightDelayedEvent) {
         log.debug("Projection2 Flight delayed with id: ${event.flightId}")
     }
 
     @EventHandler
-    fun on(event: FlightCancelledEvent) {
+    fun on(event: FlightEvent.FlightCancelledEvent) {
         log.debug("Projection2 Flight cancelled with id: ${event.flightId}")
     }
 }

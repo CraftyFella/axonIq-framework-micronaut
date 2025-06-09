@@ -1,6 +1,7 @@
 package com.playground
 
-import io.micronaut.context.annotation.Prototype
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.micronaut.tracing.annotation.NewSpan
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -9,17 +10,75 @@ import org.axonframework.eventsourcing.EventSourcingHandler
 import org.axonframework.modelling.command.AggregateCreationPolicy
 import org.axonframework.modelling.command.AggregateIdentifier
 import org.axonframework.modelling.command.AggregateLifecycle
-import org.axonframework.modelling.command.AggregateRoot
 import org.axonframework.modelling.command.CreationPolicy
 import org.axonframework.modelling.command.TargetAggregateIdentifier
 
-data class ScheduleFlightCommand(@TargetAggregateIdentifier val id: String /*, other state */)
-data class DelayFlightCommand(@TargetAggregateIdentifier val id: String /*, other state */)
-data class CancelFlightCommand(@TargetAggregateIdentifier val id: String /*, other state */)
+sealed interface FlightCommand {
+    val flightId: String
+    data class ScheduleFlightCommand(@TargetAggregateIdentifier override val flightId: String, val flightNumber: String, val origin: String, val destination: String) : FlightCommand
+    data class DelayFlightCommand(@TargetAggregateIdentifier override val flightId: String, val reason: String): FlightCommand
+    data class CancelFlightCommand(@TargetAggregateIdentifier override val flightId: String, val reason: String): FlightCommand
+}
 
-data class FlightScheduledEvent(val flightId: String)
-data class FlightDelayedEvent(val flightId: String)
-data class FlightCancelledEvent(val flightId: String)
+sealed interface FlightEvent {
+    val flightId: String
+    data class FlightScheduledEvent(override val flightId: String,  val origin: String, val destination: String) : FlightEvent
+    data class FlightDelayedEvent(override val flightId: String, val reason: String) : FlightEvent
+    data class FlightCancelledEvent(override val flightId: String, val reason: String) : FlightEvent
+}
+
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "type"
+)
+@JsonSubTypes(
+    JsonSubTypes.Type(value = FlightState.EmptyFlight::class, name = "empty"),
+    JsonSubTypes.Type(value = FlightState.ScheduledFlight::class, name = "scheduled"),
+    JsonSubTypes.Type(value = FlightState.DelayedFlight::class, name = "delayed"),
+    JsonSubTypes.Type(value = FlightState.CancelledFlight::class, name = "cancelled")
+)
+sealed interface FlightState {
+    fun evolve(event: FlightEvent) : FlightState {
+        return when (event) {
+            is FlightEvent.FlightScheduledEvent -> ScheduledFlight(event.flightId, event.origin, event.destination)
+            is FlightEvent.FlightDelayedEvent -> {
+                when (this) {
+                    is ScheduledFlight -> DelayedFlight(this.flightId, this.origin, this.destination,
+                        listOf(DelayReason.fromEvent(event)))
+                    is DelayedFlight -> DelayedFlight(this.flightId, this.origin, this.destination,
+                        this.delayReasons + DelayReason.fromEvent(event))
+                    else -> this
+                }
+            }
+            is FlightEvent.FlightCancelledEvent -> {
+                if (this is ScheduledFlight || this is DelayedFlight) {
+                    CancelledFlight(this.flightId, event.reason)
+                } else {
+                    this
+                }
+            }
+        }
+    }
+
+    val flightId: String
+    data class EmptyFlight(override val flightId: String) : FlightState
+    data class ScheduledFlight(override val flightId: String, val origin: String, val destination: String) : FlightState
+    data class DelayedFlight(override val flightId: String, val origin: String, val destination: String, val delayReasons: List<DelayReason>) : FlightState
+    data class CancelledFlight(override val flightId: String, val cancelledReason: String) : FlightState
+
+    data class DelayReason (val reason: String, val timestamp: Long) {
+        companion object {
+            fun fromEvent(event: FlightEvent.FlightDelayedEvent): DelayReason {
+                return DelayReason(event.reason, System.currentTimeMillis())
+            }
+        }
+    }
+
+    companion object {
+        val Empty = EmptyFlight("")
+    }
+}
 
 @Singleton
 open class Thing {
@@ -38,60 +97,55 @@ class FlightAggregate() {
     @Transient
     private lateinit var thing: Thing
 
-    companion object {
-        val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(FlightAggregate::class.java)
-    }
-
-    var cancelled: Boolean = false
+    var state: FlightState = FlightState.Empty
     @AggregateIdentifier var aggregateId: String? = null
 
     @CommandHandler
     @CreationPolicy(AggregateCreationPolicy.CREATE_IF_MISSING)
-    fun handle(command: ScheduleFlightCommand): String {
-        if (aggregateId == null) {
-            AggregateLifecycle.apply(FlightScheduledEvent(command.id))
-            return "Flight scheduled with id: ${command.id}"
+    fun handle(command: FlightCommand.ScheduleFlightCommand): String {
+        if (state is FlightState.EmptyFlight) {
+            AggregateLifecycle.apply(FlightEvent.FlightScheduledEvent(command.flightId, command.origin, command.destination))
+            return "Flight scheduled with id: ${command.flightId}"
         } else {
-            return "Flight scheduled with id: ${command.id} again"
+            return "Flight scheduled with id: ${command.flightId} again"
         }
     }
 
     @CommandHandler
     @CreationPolicy(AggregateCreationPolicy.NEVER)
-    fun handle(command: CancelFlightCommand): String {
-        if (cancelled) {
+    fun handle(command: FlightCommand.CancelFlightCommand): String {
+        if (state is FlightState.CancelledFlight) {
             throw IllegalStateException("Flight already cancelled")
         }
-        AggregateLifecycle.apply(FlightCancelledEvent(command.id))
-        return "Flight cancelled with id: ${command.id}"
+        AggregateLifecycle.apply(FlightEvent.FlightCancelledEvent(command.flightId, command.reason))
+        return "Flight cancelled with id: ${command.flightId}"
     }
 
     @CommandHandler
     @CreationPolicy(AggregateCreationPolicy.NEVER)
-    fun handle(command: DelayFlightCommand): String {
-        if (cancelled) {
+    fun handle(command: FlightCommand.DelayFlightCommand): String {
+        if (state is FlightState.CancelledFlight) {
             throw IllegalStateException("Flight already cancelled")
         }
-        AggregateLifecycle.apply(FlightDelayedEvent(command.id))
-        return "Flight delayed with id: ${command.id}"
+        AggregateLifecycle.apply(FlightEvent.FlightDelayedEvent(command.flightId, command.reason))
+        return "Flight delayed with id: ${command.flightId}"
     }
 
     @EventSourcingHandler
-    fun on(event: FlightScheduledEvent) {
+    fun on(event: FlightEvent.FlightScheduledEvent) {
         this.aggregateId = event.flightId
-        log.debug("EventSourcingHandler Flight scheduled with id: ${event.flightId}")
+        this.state = this.state.evolve(event)
     }
 
     @EventSourcingHandler
-    open fun on(event: FlightDelayedEvent) {
+    fun on(event: FlightEvent.FlightDelayedEvent) {
         thing.doSomething()
-        log.debug("EventSourcingHandler Flight delay with id: ${event.flightId}")
+        this.state = this.state.evolve(event)
     }
 
     @EventSourcingHandler
-    fun on(event: FlightCancelledEvent) {
-        this.cancelled = true
-        log.debug("EventSourcingHandler Flight cancel with id: ${event.flightId}")
+    fun on(event: FlightEvent.FlightCancelledEvent) {
+        this.state = this.state.evolve(event)
     }
 
 }

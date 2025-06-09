@@ -22,18 +22,17 @@ seems you can read the events directly from the event store anyway.
 * ~~Transactions~~
 * ~~Micronaut Aggregate Factory~~
 * ~~Micronaut Saga Factory~~
-* Fix connection leak, after 20 requires the pool is exhausted, check the 
-* Auto Scanning Aggregate Factory
-* Transaction Manager playing nicely with Micronaut data
+* ~~Fix connection leak, after 20 requires the pool is exhausted, check the~~
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
-* Load Test
 * Have IO in the streaming projections
-* Create a shopping basket example
+* Replay projections (streaming)
+* Load Test
+* Transaction Manager playing nicely with Micronaut data (Nice to have, can work around this TBH)
 
 ### Transactions TODO
 
-	See if I can wire in a transaction manager for POSTGres or Mongo and see if MN has support for jakarta.persistenc whic is what JpaEventStorageEngine uses..
+	See if I can wire in a transaction manager for POSTGres or Mongo and see if MN has support for jakarta.persistence which is what JpaEventStorageEngine uses..
 
 	Ideally though we're going to connect to mongo or postgres.
 
