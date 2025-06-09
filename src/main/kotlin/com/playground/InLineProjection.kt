@@ -36,39 +36,35 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
         connectionProvider.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute(sql)
-                logger.info("Flights table created or already exists")
             }
         }
     }
 
     @EventHandler
-    fun on(event: FlightScheduledEvent) {
+    fun on(event: FlightEvent.FlightScheduledEvent) {
         logger.debug("Projection3 Flight scheduled with id: ${event.flightId}")
-
-
-            upsertFlight(event.flightId, 0, false, 0)
+        upsertFlight(event.flightId, 0, false, 0)
 
     }
 
     @EventHandler
     @NewSpan
-    open fun on(event: FlightDelayedEvent) {
+    open fun on(event: FlightEvent.FlightDelayedEvent) {
         logger.debug("Projection3 Flight delayed with id: ${event.flightId}")
 
 
+        // First get the current delay count
+        val currentValues = getFlightDetails(connectionProvider.connection, event.flightId) ?: Triple(0, false, 0)
+        val (currentDelayCount, isCancelled, _) = currentValues
 
-                // First get the current delay count
-                val currentValues = getFlightDetails(connectionProvider.connection, event.flightId) ?: Triple(0, false, 0)
-                val (currentDelayCount, isCancelled, _) = currentValues
+        // Increment the delay count
+        upsertFlight(event.flightId, currentDelayCount + 1, isCancelled, 0)
 
-                // Increment the delay count
-                upsertFlight(event.flightId, currentDelayCount + 1, isCancelled, 0)
-
-        }
+    }
 
 
     @EventHandler
-    fun on(event: FlightCancelledEvent) {
+    fun on(event: FlightEvent.FlightCancelledEvent) {
         if (event.flightId == "breaksprojection2") {
             throw RuntimeException("Projection3 Flight cancelled with id: ${event.flightId}")
         }
@@ -76,16 +72,16 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
 
         //transactionManager.executeInTransaction {
 
-                // Get the current delay count
-                val currentValues = getFlightDetails(connectionProvider.connection, event.flightId) ?: Triple(0, false, 0)
-                val (currentDelayCount, _, _) = currentValues
+        // Get the current delay count
+        val currentValues = getFlightDetails(connectionProvider.connection, event.flightId) ?: Triple(0, false, 0)
+        val (currentDelayCount, _, _) = currentValues
 
-                // Mark as cancelled while preserving delay count
-                upsertFlight(event.flightId, currentDelayCount, true, 0)
-            //}
-            throw RuntimeException("Projection3 Flight cancelled with id: ${event.flightId}")
+        // Mark as cancelled while preserving delay count
+        upsertFlight(event.flightId, currentDelayCount, true, 0)
+        //}
+        throw RuntimeException("Projection3 Flight cancelled with id: ${event.flightId}")
 
-        }
+    }
 
 
     private fun getFlightDetails(connection: Connection, flightId: String): Triple<Int, Boolean, Long>? {
@@ -130,8 +126,10 @@ open class InLineProjection(private val connectionProvider: ConnectionProvider) 
                 ps.setLong(7, version)
 
                 ps.executeUpdate()
-                logger.debug("Flight {} updated: delays={}, cancelled={}, version={}",
-                    flightId, delayCount, cancelled, version)
+                logger.debug(
+                    "Flight {} updated: delays={}, cancelled={}, version={}",
+                    flightId, delayCount, cancelled, version
+                )
             }
         }
     }

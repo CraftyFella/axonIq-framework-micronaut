@@ -18,19 +18,19 @@ class FlightManagementSaga {
 
     @StartSaga
     @SagaEventHandler(associationProperty = "flightId")
-    fun handle(event: FlightScheduledEvent?) {
+    fun handle(event: FlightEvent.FlightScheduledEvent?) {
         log.debug("Saga Flight scheduled: ${event?.flightId}")
     }
 
     @SagaEventHandler(associationProperty = "flightId")
-    fun handle(event: FlightDelayedEvent?) {
+    fun handle(event: FlightEvent.FlightDelayedEvent?) {
         delayed = true
         thing.doSomething() // Example usage of injected dependency
         log.debug("Saga FlightDelayedEvent: ${event?.flightId}")
     }
 
     @SagaEventHandler(associationProperty = "flightId")
-    fun handle(event: FlightCancelledEvent?) {
+    fun handle(event: FlightEvent.FlightCancelledEvent?) {
         cancelled = true
         log.debug("Saga FlightCancelledEvent: ${event?.flightId}")
         SagaLifecycle.end()
