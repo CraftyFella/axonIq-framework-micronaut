@@ -15,9 +15,8 @@
 <!--    <logger name ="org.axonframework.messaging.unitofwork" level="debug" />-->
 
 <!--    <logger name="org.axonframework.messaging.unitofwork.AbstractUnitOfWork" level="DEBUG"/>-->
-<!--        <logger name="com.playground.autowire.UnitOfWorkAwareTransactionManager" level="DEBUG"/>-->
+
 <!--        <logger name="com.zaxxer.hikari.pool.HikariPool" level="DEBUG"/>-->
-        <logger name="com.playground.autowire.LoggingConnectionProvider" level="DEBUG"/>
 
     <root level="ERROR">
         <appender-ref ref="STDOUT" />
