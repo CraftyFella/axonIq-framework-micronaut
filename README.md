@@ -29,7 +29,7 @@
 
 ## Deciders
 
-I can think of two options for the decider pattern with Axon and Micronaut:
+I can think of 3 options for the decider pattern with Axon and Micronaut:
 
 ### Option 1: Just use an evolve method for events
 
@@ -150,7 +150,7 @@ class FlightDeciderAggregateFirstAttempt() {
 }
 ```
 
-### Option 2: Explicit Decider and DeciderAggregate to split the concerns
+### Option 3: Explicit Decider and DeciderAggregate to split the concerns
 
 When dispatching a command, instead of using the default concreate command when sending instead wrap it in a commandmessage as follows:
 
