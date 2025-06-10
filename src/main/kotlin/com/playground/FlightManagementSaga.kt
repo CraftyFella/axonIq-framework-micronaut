@@ -14,7 +14,7 @@ class FlightManagementSaga {
     }
 
     @Inject
-    private lateinit var thing: Thing
+    private lateinit var thing: InjectableThing
 
     @StartSaga
     @SagaEventHandler(associationProperty = "flightId")

@@ -6,10 +6,13 @@ import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.playground.FlightDeciderAggregate2
 import com.playground.FlightManagementSaga
-import com.playground.FlightsQueries
 import com.playground.projections.FlightDetailsInlineProjection
 import com.playground.projections.ScheduledFlightsByDestinationProjection
 import com.playground.projections.ScheduledFlightsByOriginProjection
+import com.playground.queries.AllFlightsQueryHandler
+import com.playground.queries.FlightDetailsQueryHandler
+import com.playground.queries.FlightsByDestinationQueryHandler
+import com.playground.queries.FlightsByOriginQueryHandler
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
@@ -135,7 +138,10 @@ class AxonFactory() {
         eventStore: EmbeddedEventStore,
         aggregateFactoryHelper: MicronautAggregateConfigurer,
         micronautResourceInjector: MicronautResourceInjector,
-        flightsQueries: FlightsQueries
+        allFlightsQueryHandler: AllFlightsQueryHandler,
+        flightDetailsQueryHandler: FlightDetailsQueryHandler,
+        flightsByOriginQueryHandler: FlightsByOriginQueryHandler,
+        flightsByDestinationQueryHandler: FlightsByDestinationQueryHandler
     ): Configuration {
         val configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
@@ -148,7 +154,10 @@ class AxonFactory() {
             .configureSerializer { jacksonSerializer() }
             .configureResourceInjector { micronautResourceInjector }
             .configureAggregate(aggregateFactoryHelper.configurationFor(FlightDeciderAggregate2::class.java))
-            .registerQueryHandler { flightsQueries }
+            .registerQueryHandler { allFlightsQueryHandler }
+            .registerQueryHandler { flightDetailsQueryHandler }
+            .registerQueryHandler { flightsByOriginQueryHandler }
+            .registerQueryHandler { flightsByDestinationQueryHandler }
             .eventProcessing { config ->
                 config
                     .registerTokenStore { _ -> tokenStore }

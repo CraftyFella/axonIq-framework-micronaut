@@ -49,7 +49,7 @@ Accept: application/json
 {}
 
 ### Cancel a flight
-PATCH http://localhost:8080/flights/flight-123/cancel
+PATCH http://localhost:8080/flights/f939d02b-8850-4003-a453-a9a2f588cdfe/cancel
 Content-Type: application/json
 Accept: application/json
 
@@ -58,7 +58,7 @@ Accept: application/json
 }
 
 ### Cancel a flight with auto-generated reason
-PATCH http://localhost:8080/flights/flight-123/cancel
+PATCH http://localhost:8080/flights/f939d02b-8850-4003-a453-a9a2f588cdfe/cancel
 Content-Type: application/json
 Accept: application/json
 
