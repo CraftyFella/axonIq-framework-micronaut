@@ -3,7 +3,7 @@ GET http://localhost:8080/flights
 Accept: application/json
 
 ### Get flight details by ID
-GET http://localhost:8080/flights/7aecfd7a-2241-4432-9ecf-cdc6f26c641d
+GET http://localhost:8080/flights/1957c870-32e5-4e90-8078-e05d5d31ecbe
 Accept: application/json
 
 ### Get flights by destination
@@ -33,7 +33,7 @@ Accept: application/json
 {}
 
 ### Delay a flight
-PATCH http://localhost:8080/flights/f66b78c3c-3c30-4257-9e4f-f3c50557267a/delay
+PATCH http://localhost:8080/flights/1957c870-32e5-4e90-8078-e05d5d31ecbe/delay
 Content-Type: application/json
 Accept: application/json
 
@@ -42,7 +42,7 @@ Accept: application/json
 }
 
 ### Delay a flight with auto-generated reason
-PATCH http://localhost:8080/flights/7aecfd7a-2241-4432-9ecf-cdc6f26c641d/delay
+PATCH http://localhost:8080/flights/1957c870-32e5-4e90-8078-e05d5d31ecbe/delay
 Content-Type: application/json
 Accept: application/json
 
@@ -58,7 +58,7 @@ Accept: application/json
 }
 
 ### Cancel a flight with auto-generated reason
-PATCH http://localhost:8080/flights/f939d02b-8850-4003-a453-a9a2f588cdfe/cancel
+PATCH http://localhost:8080/flights/a3e73eca-8563-4326-85ee-0dfeeb3c5b0f/cancel
 Content-Type: application/json
 Accept: application/json
 

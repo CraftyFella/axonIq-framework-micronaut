@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.playground.FlightManagementSaga
 import com.playground.aggregate.FlightAggregateOption3
+import com.playground.projections.CancelledFlightsCounterProjection
 import com.playground.projections.FlightDetailsInlineProjection
 import com.playground.projections.ScheduledFlightsByDestinationProjection
 import com.playground.projections.ScheduledFlightsByOriginProjection
@@ -130,6 +131,7 @@ class AxonFactory() {
         scheduledFlightsByOriginProjection: ScheduledFlightsByOriginProjection,
         scheduledFlightsByDestinationProjection: ScheduledFlightsByDestinationProjection,
         inLineProjection: FlightDetailsInlineProjection,
+        cancelledFlightsCounterProjection: CancelledFlightsCounterProjection,
         commandBus: CommandBus,
         queryBus: QueryBus,
         tokenStore: TokenStore,
@@ -165,6 +167,7 @@ class AxonFactory() {
                     .registerSubscribingEventProcessor(FlightDetailsInlineProjection.NAME)
                     .registerEventHandler { scheduledFlightsByOriginProjection }
                     .registerEventHandler { scheduledFlightsByDestinationProjection }
+                    .registerEventHandler { cancelledFlightsCounterProjection }
                     .registerEventHandler { inLineProjection }
                     .registerListenerInvocationErrorHandler(FlightDetailsInlineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerSaga(FlightManagementSaga::class.java)

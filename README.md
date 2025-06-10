@@ -21,9 +21,10 @@
 * ~~Query handlers for the projections.~~  
 ### To Do
 
+* Replay projections (streaming)
+* Connect to Axon console
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
-* Replay projections (streaming)
 * Load Test
 * Transaction Manager playing nicely with Micronaut data (Nice to have, can work around this TBH)
 
