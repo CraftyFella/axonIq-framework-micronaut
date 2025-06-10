@@ -11,7 +11,7 @@ import org.axonframework.modelling.command.AggregateLifecycle
 import org.axonframework.modelling.command.CreationPolicy
 import kotlin.collections.forEach
 
-class `Option2.kt`() {
+class FlightAggregateOption2() {
     var state: FlightState = FlightState.Companion.Empty
     @AggregateIdentifier
     var aggregateId: String? = null

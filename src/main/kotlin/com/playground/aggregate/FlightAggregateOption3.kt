@@ -115,7 +115,7 @@ abstract class DeciderAggregate2<TState, TCommand, TEvent, TSelf : DeciderAggreg
     }
 }
 
-class FlightDeciderAggregate2 : DeciderAggregate2<FlightState, FlightCommand, FlightEvent, FlightDeciderAggregate2>() {
+class FlightAggregateOption3 : DeciderAggregate2<FlightState, FlightCommand, FlightEvent, FlightAggregateOption3>() {
     override val decider: Decider<FlightState, FlightCommand, FlightEvent> = FlightDecider2()
 
     @CommandHandler

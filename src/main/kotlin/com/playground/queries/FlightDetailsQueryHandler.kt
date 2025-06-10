@@ -1,5 +1,6 @@
 package com.playground.queries
 
+import com.playground.FlightDetailsResponse
 import com.playground.FlightQuery
 import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider

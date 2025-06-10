@@ -38,7 +38,7 @@ abstract class DeciderAggregate<TState, TCommand, TEvent> {
     }
 }
 
-class FlightDeciderAggregate : DeciderAggregate<FlightState, FlightCommand, FlightEvent>() {
+class FlightAggregateOption4 : DeciderAggregate<FlightState, FlightCommand, FlightEvent>() {
     override var state: FlightState = FlightState.Empty
 
     // Concrete command handler method that the framework can find

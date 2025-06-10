@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.playground.FlightDeciderAggregate2
 import com.playground.FlightManagementSaga
+import com.playground.aggregate.FlightAggregateOption3
 import com.playground.projections.FlightDetailsInlineProjection
 import com.playground.projections.ScheduledFlightsByDestinationProjection
 import com.playground.projections.ScheduledFlightsByOriginProjection
@@ -153,7 +153,7 @@ class AxonFactory() {
             .configureQueryBus { _ -> queryBus }
             .configureSerializer { jacksonSerializer() }
             .configureResourceInjector { micronautResourceInjector }
-            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightDeciderAggregate2::class.java))
+            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregateOption3::class.java))
             .registerQueryHandler { allFlightsQueryHandler }
             .registerQueryHandler { flightDetailsQueryHandler }
             .registerQueryHandler { flightsByOriginQueryHandler }
