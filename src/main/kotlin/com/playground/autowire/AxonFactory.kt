@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.playground.FlightAggregate
 import com.playground.FlightDeciderAggregate2
 import com.playground.FlightManagementSaga
-import com.playground.InLineProjection
-import com.playground.ScheduledFlightsByDestinationProjection
-import com.playground.ScheduledFlightsByOriginProjection
+import com.playground.FlightsQueries
+import com.playground.projections.FlightDetailsInlineProjection
+import com.playground.projections.ScheduledFlightsByDestinationProjection
+import com.playground.projections.ScheduledFlightsByOriginProjection
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
@@ -36,6 +36,7 @@ import org.axonframework.modelling.saga.repository.SagaStore
 import org.axonframework.modelling.saga.repository.jdbc.JdbcSagaStore
 import org.axonframework.modelling.saga.repository.jdbc.PostgresSagaSqlSchema
 import org.axonframework.queryhandling.QueryBus
+import org.axonframework.queryhandling.QueryGateway
 import org.axonframework.queryhandling.SimpleQueryBus
 import org.axonframework.serialization.json.JacksonSerializer
 import org.axonframework.tracing.SpanFactory
@@ -125,7 +126,7 @@ class AxonFactory() {
     fun configuration(
         scheduledFlightsByOriginProjection: ScheduledFlightsByOriginProjection,
         scheduledFlightsByDestinationProjection: ScheduledFlightsByDestinationProjection,
-        inLineProjection: InLineProjection,
+        inLineProjection: FlightDetailsInlineProjection,
         commandBus: CommandBus,
         queryBus: QueryBus,
         tokenStore: TokenStore,
@@ -133,7 +134,8 @@ class AxonFactory() {
         spanFactory: SpanFactory,
         eventStore: EmbeddedEventStore,
         aggregateFactoryHelper: MicronautAggregateConfigurer,
-        micronautResourceInjector: MicronautResourceInjector
+        micronautResourceInjector: MicronautResourceInjector,
+        flightsQueries: FlightsQueries
     ): Configuration {
         val configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
@@ -146,17 +148,19 @@ class AxonFactory() {
             .configureSerializer { jacksonSerializer() }
             .configureResourceInjector { micronautResourceInjector }
             .configureAggregate(aggregateFactoryHelper.configurationFor(FlightDeciderAggregate2::class.java))
+            .registerQueryHandler { flightsQueries }
             .eventProcessing { config ->
                 config
                     .registerTokenStore { _ -> tokenStore }
                     .registerSagaStore { _ -> sagaStore }
-                    .registerSubscribingEventProcessor(InLineProjection.NAME)
+                    .registerSubscribingEventProcessor(FlightDetailsInlineProjection.NAME)
                     .registerEventHandler { scheduledFlightsByOriginProjection }
                     .registerEventHandler { scheduledFlightsByDestinationProjection }
                     .registerEventHandler { inLineProjection }
-                    .registerListenerInvocationErrorHandler(InLineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
+                    .registerListenerInvocationErrorHandler(FlightDetailsInlineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerSaga(FlightManagementSaga::class.java)
             }
+
 
         return configurer.buildConfiguration()
     }
@@ -164,6 +168,11 @@ class AxonFactory() {
     @Singleton
     fun commandGateway(config: Configuration): CommandGateway {
         return config.commandGateway()
+    }
+
+    @Singleton
+    fun queryGateway(config: Configuration): QueryGateway {
+        return config.queryGateway()
     }
 
     private fun jacksonSerializer(): JacksonSerializer {

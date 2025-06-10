@@ -28,6 +28,13 @@ sealed interface FlightEvent {
     data class FlightCancelledEvent(override val flightId: String, val reason: String) : FlightEvent
 }
 
+sealed interface FlightQuery {
+    data class GetFlightDetailsQuery(val flightId: String) : FlightQuery
+    data class GetAllFlightsQuery(val flightId: String) : FlightQuery
+    data class FlightsByDestination(val destination: String) : FlightQuery
+    data class FlightsByOrigin(val origin: String) : FlightQuery
+}
+
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.PROPERTY,

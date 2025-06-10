@@ -1,18 +1,24 @@
 package com.playground
 
+import com.playground.queries.FlightDetailsResponse
+import com.playground.queries.FlightsListResponse
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
-import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Get
-import io.micronaut.http.annotation.Produces
+import io.micronaut.http.annotation.*
+import io.micronaut.serde.annotation.Serdeable
 import org.axonframework.commandhandling.GenericCommandMessage
 import org.axonframework.commandhandling.gateway.CommandGateway
 import org.axonframework.messaging.GenericMessage
 import org.axonframework.messaging.MetaData
+import org.axonframework.queryhandling.QueryGateway
+import java.util.concurrent.CompletableFuture
 import kotlin.random.Random
 
-@Controller("/flight")
-@Produces(MediaType.TEXT_HTML)
-class FlightController(private val commandGateway: CommandGateway) {
+@Controller("/flights")
+class FlightController(
+	private val commandGateway: CommandGateway,
+	private val queryGateway: QueryGateway
+) {
 
 	private val airports = listOf("JFK", "LAX", "LHR", "CDG", "SYD", "DXB", "HND", "PEK")
 	private val delayReasons = listOf(
@@ -39,18 +45,54 @@ class FlightController(private val commandGateway: CommandGateway) {
 		return result.toString()
 	}
 
-//	private fun sendCommand(command: FlightCommand): String {
-//		val result: String = commandGateway.sendAndWait(command)
-//		return result
-//	}
+	// Query endpoints
+	@Get("/{flightId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	fun getFlightDetails(flightId: String): CompletableFuture<FlightDetailsResponse> {
+		return queryGateway.query(
+			FlightQuery.GetFlightDetailsQuery(flightId),
+			FlightDetailsResponse::class.java
+		)
+	}
 
-	@Get("{flightId}/schedule")
-	fun flight(flightId: String): String {
-		val origin = randomAirport()
-		val destination = randomAirport().let {
+	@Get
+	@Produces(MediaType.APPLICATION_JSON)
+	fun getAllFlights(): CompletableFuture<FlightsListResponse> {
+		return queryGateway.query(
+			FlightQuery.GetAllFlightsQuery(""),
+			FlightsListResponse::class.java
+		)
+	}
+
+	@Get("/by-destination/{destination}")
+	@Produces(MediaType.APPLICATION_JSON)
+	fun getFlightsByDestination(destination: String): CompletableFuture<FlightsListResponse> {
+		return queryGateway.query(
+			FlightQuery.FlightsByDestination(destination),
+			FlightsListResponse::class.java
+		)
+	}
+
+	@Get("/by-origin/{origin}")
+	@Produces(MediaType.APPLICATION_JSON)
+	fun getFlightsByOrigin(origin: String): CompletableFuture<FlightsListResponse> {
+		return queryGateway.query(
+			FlightQuery.FlightsByOrigin(origin),
+			FlightsListResponse::class.java
+		)
+	}
+
+	// Command endpoints - using more appropriate HTTP methods
+	@Post
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	fun scheduleFlight(@Body request: ScheduleFlightRequest): HttpResponse<CommandResponse> {
+		val flightId = request.flightId ?: java.util.UUID.randomUUID().toString()
+		val origin = request.origin ?: randomAirport()
+		val destination = request.destination ?: randomAirport().let {
 			if (it == origin) airports.first { airport -> airport != origin } else it
 		}
-		val flightNumber = randomFlightNumber()
+		val flightNumber = request.flightNumber ?: randomFlightNumber()
 
 		val command = FlightCommand.ScheduleFlightCommand(
 			flightId = flightId,
@@ -58,26 +100,50 @@ class FlightController(private val commandGateway: CommandGateway) {
 			origin = origin,
 			destination = destination
 		)
-		return sendCommandAsSumType(command, FlightCommand::class.java)
+		val result = sendCommandAsSumType(command, FlightCommand::class.java)
+		return HttpResponse.created(CommandResponse(result, flightId))
 	}
 
-	@Get("{flightId}/delay/")
-	fun delay(flightId: String): String {
-		val reason = delayReasons[Random.nextInt(delayReasons.size)]
+	@Patch("/{flightId}/delay")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	fun delayFlight(flightId: String, @Body request: DelayFlightRequest): HttpResponse<CommandResponse> {
+		val reason = request.reason ?: delayReasons[Random.nextInt(delayReasons.size)]
 		val command = FlightCommand.DelayFlightCommand(
 			flightId = flightId,
 			reason = reason
 		)
-		return sendCommandAsSumType(command, FlightCommand::class.java)
+		val result = sendCommandAsSumType(command, FlightCommand::class.java)
+		return HttpResponse.ok(CommandResponse(result, flightId))
 	}
 
-	@Get("{flightId}/cancel/")
-	fun cancel(flightId: String): String {
-		val reason = cancelReasons[Random.nextInt(cancelReasons.size)]
+	@Patch("/{flightId}/cancel")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	fun cancelFlight(flightId: String, @Body request: CancelFlightRequest): HttpResponse<CommandResponse> {
+		val reason = request.reason ?: cancelReasons[Random.nextInt(cancelReasons.size)]
 		val command = FlightCommand.CancelFlightCommand(
 			flightId = flightId,
 			reason = reason
 		)
-		return sendCommandAsSumType(command, FlightCommand::class.java)
+		val result = sendCommandAsSumType(command, FlightCommand::class.java)
+		return HttpResponse.ok(CommandResponse(result, flightId))
 	}
 }
+
+@Serdeable
+data class ScheduleFlightRequest(
+	val flightId: String? = null,
+	val flightNumber: String? = null,
+	val origin: String? = null,
+	val destination: String? = null
+)
+
+@Serdeable
+data class DelayFlightRequest(val reason: String? = null)
+
+@Serdeable
+data class CancelFlightRequest(val reason: String? = null)
+
+@Serdeable
+data class CommandResponse(val message: String, val flightId: String)

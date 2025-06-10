@@ -18,10 +18,9 @@
   * ~~Scheduled Flights by Origin~~
   * ~~Scheduled Flights by Destination~~
   * ~~Flights delay count and status~~
-  
+* ~~Query handlers for the projections.~~  
 ### To Do
 
-* Query handlers for the projections.
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
 * Replay projections (streaming)
