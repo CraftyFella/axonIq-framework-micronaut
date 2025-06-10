@@ -1,6 +1,6 @@
 micronaut:
   server:
-    port: 8082
+    port: 8080
   application:
     name: axon-cart-mongo
 

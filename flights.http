@@ -1,0 +1,65 @@
+### Get all flights
+GET http://localhost:8080/flights
+Accept: application/json
+
+### Get flight details by ID
+GET http://localhost:8080/flights/f939d02b-8850-4003-a453-a9a2f588cdfe
+Accept: application/json
+
+### Get flights by destination
+GET http://localhost:8080/flights/by-destination/LHR
+Accept: application/json
+
+### Get flights by origin
+GET http://localhost:8080/flights/by-origin/JFK
+Accept: application/json
+
+### Schedule a new flight
+POST http://localhost:8080/flights
+Content-Type: application/json
+Accept: application/json
+
+{
+  "flightNumber": "FL1234",
+  "origin": "JFK",
+  "destination": "LHR"
+}
+
+### Schedule a new flight with auto-generated values
+POST http://localhost:8080/flights
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+### Delay a flight
+PATCH http://localhost:8080/flights/f66b78c3c-3c30-4257-9e4f-f3c50557267a/delay
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Bad weather conditions"
+}
+
+### Delay a flight with auto-generated reason
+PATCH http://localhost:8080/flights/f939d02b-8850-4003-a453-a9a2f588cdfe/delay
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+### Cancel a flight
+PATCH http://localhost:8080/flights/flight-123/cancel
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Technical issues with aircraft"
+}
+
+### Cancel a flight with auto-generated reason
+PATCH http://localhost:8080/flights/flight-123/cancel
+Content-Type: application/json
+Accept: application/json
+
+{}
