@@ -13,11 +13,11 @@ import org.axonframework.modelling.command.AggregateLifecycle
 import org.axonframework.modelling.command.CreationPolicy
 
 // Option 1. see Readme.md for details
-class `Option1.kt`() {
+class FlightAggregateOption1() {
 
     @Inject
     @Transient
-    private lateinit var thing: Thing
+    private lateinit var injectableThing: InjectableThing
 
     var state: FlightState = FlightState.Companion.Empty
     @AggregateIdentifier
