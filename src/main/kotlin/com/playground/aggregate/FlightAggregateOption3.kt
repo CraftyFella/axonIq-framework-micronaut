@@ -11,13 +11,6 @@ import org.axonframework.modelling.command.AggregateIdentifier
 import org.axonframework.modelling.command.AggregateLifecycle
 import org.axonframework.modelling.command.CreationPolicy
 
-interface Decider<TState, TCommand, TEvent> {
-    fun decide(state: TState, command: TCommand): List<TEvent>
-    fun evolve(state: TState, event: TEvent): TState
-    fun initialState(): TState
-    fun streamId(event: TEvent): String
-}
-
 class FlightDecider2 : Decider<FlightState, FlightCommand, FlightEvent> {
     override fun decide(state: FlightState, command: FlightCommand): List<FlightEvent> {
         return when (command) {

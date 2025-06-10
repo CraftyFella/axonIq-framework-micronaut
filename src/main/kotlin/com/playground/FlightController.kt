@@ -10,17 +10,13 @@ import io.micronaut.http.annotation.Patch
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Produces
 import io.micronaut.serde.annotation.Serdeable
-import org.axonframework.commandhandling.GenericCommandMessage
-import org.axonframework.commandhandling.gateway.CommandGateway
-import org.axonframework.messaging.GenericMessage
-import org.axonframework.messaging.MetaData
 import org.axonframework.queryhandling.QueryGateway
 import java.util.concurrent.CompletableFuture
 import kotlin.random.Random
 
 @Controller("/flights")
 class FlightController(
-	private val commandGateway: CommandGateway,
+	private val commandGateway: SumTypeCommandDispatcher,
 	private val queryGateway: QueryGateway
 ) {
 
@@ -43,11 +39,7 @@ class FlightController(
 	private fun randomAirport() = airports[Random.nextInt(airports.size)]
 	private fun randomFlightNumber() = "FL${Random.nextInt(1000, 9999)}"
 
-	private fun <T> sendCommandAsSumType(command: T, clazz: Class<T>): String {
-		val commandMessage = GenericCommandMessage(GenericMessage<T?>(command, MetaData.emptyInstance()), clazz.name)
-		val result: Any = commandGateway.sendAndWait(commandMessage)
-		return result.toString()
-	}
+
 
 	// Query endpoints
 	@Get("/{flightId}")
@@ -104,7 +96,7 @@ class FlightController(
 			origin = origin,
 			destination = destination
 		)
-		val result = sendCommandAsSumType(command, FlightCommand::class.java)
+		val result = commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
 		return HttpResponse.created(CommandResponse(result, flightId))
 	}
 
@@ -117,7 +109,7 @@ class FlightController(
 			flightId = flightId,
 			reason = reason
 		)
-		val result = sendCommandAsSumType(command, FlightCommand::class.java)
+		val result = commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
 		return HttpResponse.ok(CommandResponse(result, flightId))
 	}
 
@@ -130,7 +122,7 @@ class FlightController(
 			flightId = flightId,
 			reason = reason
 		)
-		val result = sendCommandAsSumType(command, FlightCommand::class.java)
+		val result = commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
 		return HttpResponse.ok(CommandResponse(result, flightId))
 	}
 }
