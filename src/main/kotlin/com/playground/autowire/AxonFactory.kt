@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.playground.aggregate.FlightAggregateOption3
 import io.axoniq.console.framework.AxoniqConsoleConfigurerModule
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
@@ -35,6 +34,7 @@ import org.axonframework.modelling.saga.repository.jdbc.PostgresSagaSqlSchema
 import org.axonframework.queryhandling.QueryBus
 import org.axonframework.queryhandling.QueryGateway
 import org.axonframework.queryhandling.SimpleQueryBus
+import org.axonframework.serialization.Serializer
 import org.axonframework.serialization.json.JacksonSerializer
 import org.axonframework.tracing.SpanFactory
 import org.axonframework.tracing.opentelemetry.OpenTelemetrySpanFactory
@@ -43,9 +43,9 @@ import org.axonframework.tracing.opentelemetry.OpenTelemetrySpanFactory
 class AxonFactory() {
 
     @Singleton
-    fun tokenStore(connectionProvider: ConnectionProvider): TokenStore {
+    fun tokenStore(connectionProvider: ConnectionProvider, serializer: Serializer): TokenStore {
         val tokenStore =
-            JdbcTokenStore.builder().connectionProvider(connectionProvider).serializer(jacksonSerializer()).build()
+            JdbcTokenStore.builder().connectionProvider(connectionProvider).serializer(serializer).build()
 
         // Create the token store schema
         tokenStore.createSchema(PostgresTokenTableFactory.INSTANCE)
@@ -55,10 +55,8 @@ class AxonFactory() {
 
     @Singleton
     fun eventStorageEngine(
-        connectionProvider: ConnectionProvider, transactionManager: TransactionManager
+        connectionProvider: ConnectionProvider, transactionManager: TransactionManager, serializer: Serializer
     ): EventStorageEngine {
-        val serializer = jacksonSerializer()
-
         val engine = JdbcEventStorageEngine.builder()
             .snapshotSerializer(serializer)
             .eventSerializer(serializer)
@@ -85,8 +83,7 @@ class AxonFactory() {
     }
 
     @Singleton
-    fun sagaStore(connectionProvider: ConnectionProvider): SagaStore<Any> {
-        val serializer = jacksonSerializer()
+    fun sagaStore(connectionProvider: ConnectionProvider, serializer: Serializer): SagaStore<Any> {
 
         val sagaStore =
             JdbcSagaStore.builder()
@@ -121,18 +118,16 @@ class AxonFactory() {
 
     @Singleton
     fun configuration(
-
         commandBus: CommandBus,
         queryBus: QueryBus,
         tokenStore: TokenStore,
         sagaStore: SagaStore<Any>,
         spanFactory: SpanFactory,
         eventStore: EmbeddedEventStore,
-        aggregateFactoryHelper: MicronautAggregateConfigurer,
         micronautResourceInjector: MicronautResourceInjector,
-
         @Nullable axoniqConsoleConfigurerModule: AxoniqConsoleConfigurerModule?,
-        applicationConfigurer: ApplicationConfigurer
+        applicationConfigurer: ApplicationConfigurer,
+        serializer: Serializer
     ): Configuration {
         val configurer: Configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
@@ -142,9 +137,8 @@ class AxonFactory() {
             }
             .configureCommandBus { _ -> commandBus }
             .configureQueryBus { _ -> queryBus }
-            .configureSerializer { jacksonSerializer() }
+            .configureSerializer { serializer }
             .configureResourceInjector { micronautResourceInjector }
-            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregateOption3::class.java))
             .eventProcessing { config ->
                 config
                     .registerTokenStore { _ -> tokenStore }
@@ -168,7 +162,8 @@ class AxonFactory() {
         return config.queryGateway()
     }
 
-    private fun jacksonSerializer(): JacksonSerializer {
+    @Singleton
+    fun jacksonSerializer(): Serializer {
         return JacksonSerializer.builder().objectMapper(
             ObjectMapper().apply {
                 registerModule(
