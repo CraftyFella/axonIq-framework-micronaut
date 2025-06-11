@@ -1,4 +1,4 @@
-package com.playground.autowire
+package com.playground.library
 
 import io.micronaut.context.BeanContext
 import io.micronaut.inject.BeanDefinition

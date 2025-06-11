@@ -1,4 +1,4 @@
-package com.playground.autowire
+package com.playground.library
 
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Requires

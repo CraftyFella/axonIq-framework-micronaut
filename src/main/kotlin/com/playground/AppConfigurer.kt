@@ -1,8 +1,8 @@
 package com.playground
 
 import com.playground.aggregate.FlightAggregateOption3
-import com.playground.autowire.ApplicationConfigurer
-import com.playground.autowire.MicronautAggregateConfigurer
+import com.playground.library.ApplicationConfigurer
+import com.playground.library.MicronautAggregateConfigurer
 import com.playground.projections.CancelledFlightsCounterProjection
 import com.playground.projections.FlightDetailsInlineProjection
 import com.playground.projections.ScheduledFlightsByDestinationProjection
