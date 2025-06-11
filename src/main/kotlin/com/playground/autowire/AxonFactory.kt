@@ -14,11 +14,13 @@ import com.playground.queries.AllFlightsQueryHandler
 import com.playground.queries.FlightDetailsQueryHandler
 import com.playground.queries.FlightsByDestinationQueryHandler
 import com.playground.queries.FlightsByOriginQueryHandler
+import io.axoniq.console.framework.AxoniqConsoleConfigurerModule
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.trace.Tracer
+import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
 import org.axonframework.commandhandling.CommandBus
 import org.axonframework.commandhandling.SimpleCommandBus
@@ -26,6 +28,7 @@ import org.axonframework.commandhandling.gateway.CommandGateway
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.transaction.TransactionManager
 import org.axonframework.config.Configuration
+import org.axonframework.config.Configurer
 import org.axonframework.config.DefaultConfigurer
 import org.axonframework.eventhandling.PropagatingErrorHandler
 import org.axonframework.eventhandling.tokenstore.TokenStore
@@ -143,9 +146,10 @@ class AxonFactory() {
         allFlightsQueryHandler: AllFlightsQueryHandler,
         flightDetailsQueryHandler: FlightDetailsQueryHandler,
         flightsByOriginQueryHandler: FlightsByOriginQueryHandler,
-        flightsByDestinationQueryHandler: FlightsByDestinationQueryHandler
+        flightsByDestinationQueryHandler: FlightsByDestinationQueryHandler,
+        @Nullable axoniqConsoleConfigurerModule: AxoniqConsoleConfigurerModule?
     ): Configuration {
-        val configurer = DefaultConfigurer.defaultConfiguration(false)
+        val configurer: Configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
             .configureEventStore { c ->
                 c.onShutdown { eventStore.shutDown() }
@@ -160,6 +164,7 @@ class AxonFactory() {
             .registerQueryHandler { flightDetailsQueryHandler }
             .registerQueryHandler { flightsByOriginQueryHandler }
             .registerQueryHandler { flightsByDestinationQueryHandler }
+
             .eventProcessing { config ->
                 config
                     .registerTokenStore { _ -> tokenStore }
@@ -173,6 +178,8 @@ class AxonFactory() {
                     .registerSaga(FlightManagementSaga::class.java)
             }
 
+        // Only configure the console module if it exists
+        axoniqConsoleConfigurerModule?.configureModule(configurer)
 
         return configurer.buildConfiguration()
     }

@@ -40,6 +40,8 @@ dependencies {
     implementation("org.axonframework:axon-server-connector:4.11.2")
     implementation("org.axonframework:axon-tracing-opentelemetry:4.11.2")
 
+    implementation("io.axoniq.console:console-framework-client:1.9.2")
+
 
     implementation("com.zaxxer:HikariCP")
     implementation("org.postgresql:postgresql")

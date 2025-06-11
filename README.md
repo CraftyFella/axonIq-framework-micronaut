@@ -18,11 +18,11 @@
   * ~~Scheduled Flights by Origin~~
   * ~~Scheduled Flights by Destination~~
   * ~~Flights delay count and status~~
-* ~~Query handlers for the projections.~~  
+* ~~Query handlers for the projections.~~
+* ~~Connect to Axon console~~
 ### To Do
 
 * Replay projections (streaming)
-* Connect to Axon console
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
 * Load Test
