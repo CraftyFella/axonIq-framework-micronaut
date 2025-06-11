@@ -10,7 +10,7 @@ import org.axonframework.common.jdbc.UnitOfWorkAwareConnectionProviderWrapper
 import javax.sql.DataSource
 
 @Factory
-class ConnectionFactory {
+class UnitOfWorkAwareConnectionProviderFactory {
 
 	@Singleton
 	fun dataSource(): DataSource {
