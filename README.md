@@ -20,9 +20,10 @@
   * ~~Flights delay count and status~~
 * ~~Query handlers for the projections.~~
 * ~~Connect to Axon console~~
+* ~~Replay projections (streaming)~~
 ### To Do
 
-* Replay projections (streaming)
+
 * Multi node projections (leadership)
 * Scale out projections (Sharding projections)
 * Load Test
