@@ -49,7 +49,7 @@ Accept: application/json
 {}
 
 ### Cancel a flight
-PATCH http://localhost:8080/flights/f36af567-8beb-4355-9cdb-a2888b73f5fb/cancel
+PATCH http://localhost:8080/flights/c475b558-8a82-43b5-af6f-18a56b41e9f5/cancel
 Content-Type: application/json
 Accept: application/json
 
@@ -63,3 +63,18 @@ Content-Type: application/json
 Accept: application/json
 
 {}
+
+### List All Projections
+GET http://localhost:8080/admin/projections
+Accept: application/json
+
+### Replay a Specific Projection
+# Change the projection name as needed
+POST http://localhost:8080/admin/projections/CancelledFlightsCounter/replay
+Accept: application/json
+
+
+### Check Status of a Specific Projection Directly
+# Change the projection name as needed
+GET http://localhost:8080/admin/projections/CancelledFlightsCounter/status
+Accept: application/json

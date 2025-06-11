@@ -1,4 +1,4 @@
-package com.playground.autowire
+package com.playground.library
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource

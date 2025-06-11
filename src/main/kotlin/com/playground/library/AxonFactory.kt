@@ -1,4 +1,4 @@
-package com.playground.autowire
+package com.playground.library
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
