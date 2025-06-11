@@ -4,6 +4,10 @@ micronaut:
   application:
     name: axon-cart-mongo
 
+axoniq:
+  console:
+    application-name: "Micronaut & Axon Flight Scheduler Example"
+    dlq-mode: "FULL"
 
 otel:
   register:

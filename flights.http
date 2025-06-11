@@ -33,7 +33,7 @@ Accept: application/json
 {}
 
 ### Delay a flight
-PATCH http://localhost:8080/flights/1957c870-32e5-4e90-8078-e05d5d31ecbe/delay
+PATCH http://localhost:8080/flights/48703654-6db2-4b93-9567-14ec89204869/delay
 Content-Type: application/json
 Accept: application/json
 
