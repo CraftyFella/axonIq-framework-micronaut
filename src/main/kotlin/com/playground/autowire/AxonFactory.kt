@@ -4,16 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.playground.FlightManagementSaga
 import com.playground.aggregate.FlightAggregateOption3
-import com.playground.projections.CancelledFlightsCounterProjection
-import com.playground.projections.FlightDetailsInlineProjection
-import com.playground.projections.ScheduledFlightsByDestinationProjection
-import com.playground.projections.ScheduledFlightsByOriginProjection
-import com.playground.queries.AllFlightsQueryHandler
-import com.playground.queries.FlightDetailsQueryHandler
-import com.playground.queries.FlightsByDestinationQueryHandler
-import com.playground.queries.FlightsByOriginQueryHandler
 import io.axoniq.console.framework.AxoniqConsoleConfigurerModule
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.event.ApplicationEventListener
@@ -30,7 +21,6 @@ import org.axonframework.common.transaction.TransactionManager
 import org.axonframework.config.Configuration
 import org.axonframework.config.Configurer
 import org.axonframework.config.DefaultConfigurer
-import org.axonframework.eventhandling.PropagatingErrorHandler
 import org.axonframework.eventhandling.tokenstore.TokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.JdbcTokenStore
 import org.axonframework.eventhandling.tokenstore.jdbc.PostgresTokenTableFactory
@@ -131,10 +121,7 @@ class AxonFactory() {
 
     @Singleton
     fun configuration(
-        scheduledFlightsByOriginProjection: ScheduledFlightsByOriginProjection,
-        scheduledFlightsByDestinationProjection: ScheduledFlightsByDestinationProjection,
-        inLineProjection: FlightDetailsInlineProjection,
-        cancelledFlightsCounterProjection: CancelledFlightsCounterProjection,
+
         commandBus: CommandBus,
         queryBus: QueryBus,
         tokenStore: TokenStore,
@@ -143,11 +130,9 @@ class AxonFactory() {
         eventStore: EmbeddedEventStore,
         aggregateFactoryHelper: MicronautAggregateConfigurer,
         micronautResourceInjector: MicronautResourceInjector,
-        allFlightsQueryHandler: AllFlightsQueryHandler,
-        flightDetailsQueryHandler: FlightDetailsQueryHandler,
-        flightsByOriginQueryHandler: FlightsByOriginQueryHandler,
-        flightsByDestinationQueryHandler: FlightsByDestinationQueryHandler,
-        @Nullable axoniqConsoleConfigurerModule: AxoniqConsoleConfigurerModule?
+
+        @Nullable axoniqConsoleConfigurerModule: AxoniqConsoleConfigurerModule?,
+        applicationConfigurer: ApplicationConfigurer
     ): Configuration {
         val configurer: Configurer = DefaultConfigurer.defaultConfiguration(false)
             .configureSpanFactory { spanFactory }
@@ -160,26 +145,15 @@ class AxonFactory() {
             .configureSerializer { jacksonSerializer() }
             .configureResourceInjector { micronautResourceInjector }
             .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregateOption3::class.java))
-            .registerQueryHandler { allFlightsQueryHandler }
-            .registerQueryHandler { flightDetailsQueryHandler }
-            .registerQueryHandler { flightsByOriginQueryHandler }
-            .registerQueryHandler { flightsByDestinationQueryHandler }
-
             .eventProcessing { config ->
                 config
                     .registerTokenStore { _ -> tokenStore }
                     .registerSagaStore { _ -> sagaStore }
-                    .registerSubscribingEventProcessor(FlightDetailsInlineProjection.NAME)
-                    .registerEventHandler { scheduledFlightsByOriginProjection }
-                    .registerEventHandler { scheduledFlightsByDestinationProjection }
-                    .registerEventHandler { cancelledFlightsCounterProjection }
-                    .registerEventHandler { inLineProjection }
-                    .registerListenerInvocationErrorHandler(FlightDetailsInlineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
-                    .registerSaga(FlightManagementSaga::class.java)
+
             }
 
-        // Only configure the console module if it exists
         axoniqConsoleConfigurerModule?.configureModule(configurer)
+        applicationConfigurer.configure(configurer)
 
         return configurer.buildConfiguration()
     }
