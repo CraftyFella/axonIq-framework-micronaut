@@ -19,7 +19,7 @@ class FlightsByDestinationQueryHandler(private val connectionProvider: Connectio
     fun handle(query: FlightQuery.FlightsByDestination): FlightsListResponse {
         log.debug("Handling FlightsByDestination query for destination ${query.destination}")
 
-        val sql = "SELECT flight_id FROM flights_by_destination WHERE destination = ?"
+        val sql = "SELECT flight_id FROM flights_by_destination WHERE destination = ? LIMIT 200"
         val result = mutableListOf<String>()
 
         connectionProvider.connection.use { connection ->

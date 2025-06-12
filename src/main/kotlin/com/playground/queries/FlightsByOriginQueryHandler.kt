@@ -19,7 +19,7 @@ class FlightsByOriginQueryHandler(private val connectionProvider: ConnectionProv
     fun handle(query: FlightQuery.FlightsByOrigin): FlightsListResponse {
         log.debug("Handling FlightsByOrigin query for origin ${query.origin}")
 
-        val sql = "SELECT flight_id FROM flights_by_origin WHERE origin = ?"
+        val sql = "SELECT flight_id FROM flights_by_origin WHERE origin = ? LIMIT 200"
         val result = mutableListOf<String>()
 
         connectionProvider.connection.use { connection ->

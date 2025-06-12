@@ -2,6 +2,7 @@ package com.playground.library
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import io.micronaut.context.annotation.ConfigurationProperties
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
@@ -9,16 +10,24 @@ import org.axonframework.common.jdbc.DataSourceConnectionProvider
 import org.axonframework.common.jdbc.UnitOfWorkAwareConnectionProviderWrapper
 import javax.sql.DataSource
 
+@ConfigurationProperties("db")
+class DbConfig {
+	var url: String? = "jdbc:postgresql://localhost:5432/axon_eventstore"
+	var username: String? = "postgres"
+	var password: String = "password"
+	var driver: String = "org.postgresql.Driver"
+}
+
 @Factory
 class UnitOfWorkAwareConnectionProviderFactory {
 
 	@Singleton
-	fun dataSource(): DataSource {
+	fun dataSource(dbConfig: DbConfig): DataSource {
 		val config = HikariConfig().apply {
-			jdbcUrl = "jdbc:postgresql://localhost:5432/axon_eventstore"
-			username = "postgres"
-			password = "password"
-			driverClassName = "org.postgresql.Driver"
+			jdbcUrl = dbConfig.url
+			username = dbConfig.username
+			password = dbConfig.password
+			driverClassName = dbConfig.driver
 
 			// Connection pool settings
 			maximumPoolSize = 20
