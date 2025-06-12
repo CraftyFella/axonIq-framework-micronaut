@@ -15,7 +15,7 @@ import java.util.OptionalLong
 import java.util.concurrent.CompletableFuture
 
 @Controller("/admin/projections")
-class AdminController(private val configuration: Configuration) {
+class ProjectionsController(private val configuration: Configuration) {
 
     @Get
     @Produces(MediaType.APPLICATION_JSON)
@@ -60,8 +60,6 @@ class AdminController(private val configuration: Configuration) {
                 status = "REPLAY_STARTED",
                 message = "Replay started for projection: $name"
             )
-
-            // Create a URI to the status endpoint and use it with the accepted response
             val statusUri = URI("/admin/projections/$name/status")
             HttpResponse.accepted<ReplayResponse>(statusUri).body(responseBody)
         } else {
