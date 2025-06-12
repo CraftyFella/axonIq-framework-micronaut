@@ -2,10 +2,7 @@ package com.playground.library
 
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
-import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Get
-import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.Produces
+import io.micronaut.http.annotation.*
 import io.micronaut.serde.annotation.Serdeable
 import org.axonframework.config.Configuration
 import org.axonframework.eventhandling.StreamingEventProcessor
@@ -23,15 +20,27 @@ class ProjectionsController(private val configuration: Configuration) {
         val projections = configuration.eventProcessingConfiguration()
             .eventProcessors()
             .map { (name, processor) ->
+                val segmentDetails = if (processor is TrackingEventProcessor) {
+                    processor.processingStatus().map { (segmentId, status) ->
+                        SegmentStatus(
+                            segmentId = segmentId,
+                            caughtUp = status.isCaughtUp,
+                            replaying = status.isReplaying,
+                            tokenPosition = status.currentPosition,
+                            errorState = status.error?.message
+                        )
+                    }.toList()
+                } else emptyList()
                 ProjectionInfo(
                     name = name,
                     type = processor.javaClass.simpleName,
                     status = if (processor is TrackingEventProcessor) {
-                        if (isReplaying(processor)) "REPLAYING" else "RUNNING"
+                        if (isProcessorReplaying(processor)) "REPLAYING" else "RUNNING"
                     } else {
                         "RUNNING"
                     },
-                    supportsReplay = processor is StreamingEventProcessor
+                    supportsReplay = processor is StreamingEventProcessor,
+                    segments = segmentDetails
                 )
             }
             .sortedBy { it.name }
@@ -47,14 +56,11 @@ class ProjectionsController(private val configuration: Configuration) {
 
         return if (processor.isPresent) {
             val streamingProcessor = processor.get()
-
-            // Start a replay and return success response
             CompletableFuture.runAsync {
                 streamingProcessor.shutDown()
                 streamingProcessor.resetTokens()
                 streamingProcessor.start()
             }
-
             val responseBody = ReplayResponse(
                 name = name,
                 status = "REPLAY_STARTED",
@@ -84,9 +90,7 @@ class ProjectionsController(private val configuration: Configuration) {
         }
 
         val trackingProcessor = processor.get()
-        val isReplaying = isReplaying(trackingProcessor)
-
-        // Get progress information if available
+        val isReplaying = isProcessorReplaying(trackingProcessor)
         val segments = trackingProcessor.processingStatus()
         val segmentStatus = segments.map { (segmentId, status) ->
             SegmentStatus(
@@ -109,9 +113,85 @@ class ProjectionsController(private val configuration: Configuration) {
         return HttpResponse.ok(replayStatus)
     }
 
-    private fun isReplaying(processor: TrackingEventProcessor): Boolean {
-        return processor.processingStatus().values
-            .any { status -> status.isReplaying }
+    @Post("/{name}/scale")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun splitOrMergeSegments(
+        name: String,
+        @Body scaleRequest: ScaleRequest
+    ): HttpResponse<ScaleResponse> {
+        val processorOpt = configuration.eventProcessingConfiguration()
+            .eventProcessor(name, TrackingEventProcessor::class.java)
+
+        if (processorOpt.isEmpty) {
+            return HttpResponse.notFound(
+                ScaleResponse(
+                    name,
+                    "ERROR",
+                    "Processor not found or not a TrackingEventProcessor"
+                )
+            )
+        }
+
+        val processor = processorOpt.get()
+        val currentSegments = processor.processingStatus().size
+        val desiredSegments = scaleRequest.segmentCount
+
+        if (desiredSegments == currentSegments && scaleRequest.threadCount <= 0) {
+            return HttpResponse.ok(ScaleResponse(name, "NO_CHANGE", "No changes requested"))
+        }
+
+        // Scale segments
+        if (desiredSegments > currentSegments) {
+            // Split segments to increase count
+            var remaining = desiredSegments - currentSegments
+            var i = 0
+
+            while (remaining > 0) {
+                val segmentIds = processor.processingStatus().keys.sorted()
+                if (segmentIds.isEmpty()) break
+
+                if (i >= segmentIds.size) {
+                    i = 0 // Reset index if we need more splits than available segments
+                }
+
+                processor.splitSegment(segmentIds[i])
+                remaining--
+                i++
+            }
+        } else if (desiredSegments < currentSegments) {
+            // Merge segments to decrease count
+            var toReduce = currentSegments - desiredSegments
+
+            while (toReduce > 0) {
+                val segmentIds = processor.processingStatus().keys.sorted()
+                if (segmentIds.size <= 1) break // Can't merge if only one segment left
+
+                val highestSegment = segmentIds.last()
+                processor.mergeSegment(highestSegment)
+                toReduce--
+            }
+        }
+
+        // Update thread count if needed
+        if (scaleRequest.threadCount > 0) {
+            // Following Axon documentation, we can't directly change thread count at runtime
+            // We would need to modify application properties or use specific Axon config APIs
+            // For now, we'll log this limitation
+            println("Note: Thread count changes require application restart to take effect")
+        }
+
+        val responseBody = ScaleResponse(
+            name = name,
+            status = "SCALING",
+            message = "Scaling processor to $desiredSegments segments" +
+                    if (scaleRequest.threadCount > 0) " (thread count changes require restart)" else ""
+        )
+        val statusUri = URI("/admin/projections/$name/status")
+        return HttpResponse.accepted<ScaleResponse>(statusUri).body(responseBody)
+    }
+
+    private fun isProcessorReplaying(processor: TrackingEventProcessor): Boolean {
+        return processor.processingStatus().values.any { status -> status.isReplaying }
     }
 }
 
@@ -120,7 +200,8 @@ data class ProjectionInfo(
     val name: String,
     val type: String,
     val status: String,
-    val supportsReplay: Boolean
+    val supportsReplay: Boolean,
+    val segments: List<SegmentStatus>
 )
 
 @Serdeable
@@ -146,4 +227,17 @@ data class SegmentStatus(
     val replaying: Boolean,
     val tokenPosition: OptionalLong?,
     val errorState: String?
+)
+
+@Serdeable
+data class ScaleRequest(
+    val segmentCount: Int,
+    val threadCount: Int
+)
+
+@Serdeable
+data class ScaleResponse(
+    val name: String,
+    val status: String,
+    val message: String
 )
