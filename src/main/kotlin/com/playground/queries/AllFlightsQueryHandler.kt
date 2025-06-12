@@ -19,7 +19,7 @@ class AllFlightsQueryHandler(private val connectionProvider: ConnectionProvider)
     fun handle(query: FlightQuery.GetAllFlightsQuery): FlightsListResponse {
         log.debug("Handling GetAllFlightsQuery")
 
-        val sql = "SELECT id FROM flights"
+        val sql = "SELECT id FROM flights LIMIT 200"
         val result = mutableListOf<String>()
 
         connectionProvider.connection.use { connection ->

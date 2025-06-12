@@ -47,6 +47,9 @@ dependencies {
     implementation("org.postgresql:postgresql")
 
     testImplementation("org.axonframework:axon-test:4.11.2")
+
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
 }
 
 
