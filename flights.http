@@ -70,11 +70,11 @@ Accept: application/json
 
 ### Replay a Specific Projection
 # Change the projection name as needed
-POST http://localhost:8080/admin/projections/CancelledFlightsCounter/replay
+POST http://localhost:8080/admin/projections/ScheduledFlightsByOrigin/replay
 Accept: application/json
 
 
 ### Check Status of a Specific Projection Directly
 # Change the projection name as needed
-GET http://localhost:8080/admin/projections/CancelledFlightsCounter/status
+GET http://localhost:8080/admin/projections/ScheduledFlightsByOrigin/status
 Accept: application/json
