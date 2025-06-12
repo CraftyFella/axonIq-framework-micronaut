@@ -14,6 +14,7 @@ import com.playground.queries.FlightsByOriginQueryHandler
 import jakarta.inject.Singleton
 import org.axonframework.config.Configurer
 import org.axonframework.eventhandling.PropagatingErrorHandler
+import org.axonframework.eventhandling.TrackingEventProcessorConfiguration
 
 @Singleton
 class FlightApplicationConfigurer(
@@ -36,12 +37,19 @@ class FlightApplicationConfigurer(
             .registerQueryHandler { flightsByDestinationQueryHandler }
             .eventProcessing { processingConfigurer ->
                 processingConfigurer
+                    // inline projection
                     .registerSubscribingEventProcessor(FlightDetailsInlineProjection.NAME)
                     .registerListenerInvocationErrorHandler(FlightDetailsInlineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
+                    .registerEventHandler { flightDetailsInlineProjection }
+                    // Asynchronous projections
+                    .registerTrackingEventProcessorConfiguration("ScheduledFlightsByOrigin") {
+                        TrackingEventProcessorConfiguration
+                            .forParallelProcessing(2)
+                            .andInitialSegmentsCount(2)
+                    }
                     .registerEventHandler { scheduledFlightsByOriginProjection }
                     .registerEventHandler { scheduledFlightsByDestinationProjection }
                     .registerEventHandler { cancelledFlightsCounterProjection }
-                    .registerEventHandler { flightDetailsInlineProjection }
                     .registerSaga(FlightManagementSaga::class.java)
             }
     }

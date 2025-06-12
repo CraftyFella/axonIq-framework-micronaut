@@ -22,9 +22,9 @@
 * ~~Connect to Axon console~~
 * ~~Replay projections (streaming)~~
 * ~~Multi node projections (leadership)~~
+* ~~Scale out projections (Sharding projections)~~
 ### To Do
 
-* Scale out projections (Sharding projections)
 * Load Test
 * Transaction Manager playing nicely with Micronaut data (Nice to have, can work around this TBH)
 
