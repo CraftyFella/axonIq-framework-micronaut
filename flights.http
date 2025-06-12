@@ -85,6 +85,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "segmentCount": 1,
-  "threadCount": 1
+  "segmentCount": 6,
+  "threadCount": 6
 }

@@ -7,6 +7,7 @@ import io.micronaut.serde.annotation.Serdeable
 import org.axonframework.config.Configuration
 import org.axonframework.eventhandling.StreamingEventProcessor
 import org.axonframework.eventhandling.TrackingEventProcessor
+import reactor.core.publisher.Mono
 import java.net.URI
 import java.util.OptionalLong
 import java.util.concurrent.CompletableFuture
@@ -118,16 +119,19 @@ class ProjectionsController(private val configuration: Configuration) {
     fun splitOrMergeSegments(
         name: String,
         @Body scaleRequest: ScaleRequest
-    ): HttpResponse<ScaleResponse> {
+    ): HttpResponse<Mono<ScaleResultResponse>> {
         val processorOpt = configuration.eventProcessingConfiguration()
             .eventProcessor(name, TrackingEventProcessor::class.java)
 
         if (processorOpt.isEmpty) {
             return HttpResponse.notFound(
-                ScaleResponse(
-                    name,
-                    "ERROR",
-                    "Processor not found or not a TrackingEventProcessor"
+                Mono.just(
+                    ScaleResultResponse(
+                        name,
+                        "ERROR",
+                        "Processor not found or not a TrackingEventProcessor",
+                        emptyList()
+                    )
                 )
             )
         }
@@ -137,63 +141,141 @@ class ProjectionsController(private val configuration: Configuration) {
         val desiredSegments = scaleRequest.segmentCount
 
         if (desiredSegments == currentSegments && scaleRequest.threadCount <= 0) {
-            return HttpResponse.ok(ScaleResponse(name, "NO_CHANGE", "No changes requested"))
+            return HttpResponse.ok(
+                Mono.just(
+                    ScaleResultResponse(
+                        name,
+                        "NO_CHANGE",
+                        "No changes requested",
+                        emptyList()
+                    )
+                )
+            )
         }
 
-        // Scale segments
-        if (desiredSegments > currentSegments) {
-            // Split segments to increase count
-            var remaining = desiredSegments - currentSegments
-            var i = 0
+        val mono = Mono.defer {
+            val operations = mutableListOf<CompletableFuture<String>>()
+            val results = mutableListOf<SegmentOperationResult>()
 
-            while (remaining > 0) {
-                val segmentIds = processor.processingStatus().keys.sorted()
-                if (segmentIds.isEmpty()) break
+            // Scale segments
+            if (desiredSegments > currentSegments) {
+                // Split segments to increase count
+                var remaining = desiredSegments - currentSegments
+                var i = 0
 
-                if (i >= segmentIds.size) {
-                    i = 0 // Reset index if we need more splits than available segments
+                while (remaining > 0) {
+                    val segmentIds = processor.processingStatus().keys.sorted()
+                    if (segmentIds.isEmpty()) break
+
+                    if (i >= segmentIds.size) {
+                        i = 0 // Reset index if we need more splits than available segments
+                    }
+
+                    val segmentId = segmentIds[i]
+                    val futureResult = processor.splitSegment(segmentId)
+                        .thenApply {
+                            val result = SegmentOperationResult(
+                                operation = "SPLIT",
+                                segmentId = segmentId,
+                                success = true
+                            )
+                            results.add(result)
+                            "Split segment $segmentId"
+                        }
+                        .exceptionally { ex ->
+                            val result = SegmentOperationResult(
+                                operation = "SPLIT",
+                                segmentId = segmentId,
+                                success = false,
+                                errorMessage = ex.message
+                            )
+                            results.add(result)
+                            "Failed to split segment $segmentId: ${ex.message}"
+                        }
+
+                    operations.add(futureResult)
+                    remaining--
+                    i++
                 }
+            } else if (desiredSegments < currentSegments) {
+                // Merge segments to decrease count
+                var toReduce = currentSegments - desiredSegments
 
-                processor.splitSegment(segmentIds[i])
-                remaining--
-                i++
+                while (toReduce > 0) {
+                    val segmentIds = processor.processingStatus().keys.sorted()
+                    if (segmentIds.size <= 1) break // Can't merge if only one segment left
+
+                    val highestSegment = segmentIds.last()
+                    val futureResult = processor.mergeSegment(highestSegment)
+                        .thenApply {
+                            val result = SegmentOperationResult(
+                                operation = "MERGE",
+                                segmentId = highestSegment,
+                                success = true
+                            )
+                            results.add(result)
+                            "Merged segment $highestSegment"
+                        }
+                        .exceptionally { ex ->
+                            val result = SegmentOperationResult(
+                                operation = "MERGE",
+                                segmentId = highestSegment,
+                                success = false,
+                                errorMessage = ex.message
+                            )
+                            results.add(result)
+                            "Failed to merge segment $highestSegment: ${ex.message}"
+                        }
+
+                    operations.add(futureResult)
+                    toReduce--
+                }
             }
-        } else if (desiredSegments < currentSegments) {
-            // Merge segments to decrease count
-            var toReduce = currentSegments - desiredSegments
 
-            while (toReduce > 0) {
-                val segmentIds = processor.processingStatus().keys.sorted()
-                if (segmentIds.size <= 1) break // Can't merge if only one segment left
-
-                val highestSegment = segmentIds.last()
-                processor.mergeSegment(highestSegment)
-                toReduce--
+            // Handle thread count message (just informational)
+            val threadCountMessage = if (scaleRequest.threadCount > 0) {
+                " (thread count changes require restart)"
+            } else {
+                ""
             }
-        }
 
-        // Update thread count if needed
-        if (scaleRequest.threadCount > 0) {
-            // Following Axon documentation, we can't directly change thread count at runtime
-            // We would need to modify application properties or use specific Axon config APIs
-            // For now, we'll log this limitation
-            println("Note: Thread count changes require application restart to take effect")
+            // Create combined future and convert to Mono
+            Mono.fromFuture(
+                CompletableFuture.allOf(*operations.toTypedArray())
+                    .thenApply {
+                        ScaleResultResponse(
+                            name = name,
+                            status = "COMPLETED",
+                            message = "Scaling processor to $desiredSegments segments$threadCountMessage",
+                            operations = results
+                        )
+                    }
+            )
         }
-
-        val responseBody = ScaleResponse(
-            name = name,
-            status = "SCALING",
-            message = "Scaling processor to $desiredSegments segments" +
-                    if (scaleRequest.threadCount > 0) " (thread count changes require restart)" else ""
-        )
         val statusUri = URI("/admin/projections/$name/status")
-        return HttpResponse.accepted<ScaleResponse>(statusUri).body(responseBody)
+        return HttpResponse.accepted<Mono<ScaleResultResponse>>(statusUri).body(mono)
     }
 
     private fun isProcessorReplaying(processor: TrackingEventProcessor): Boolean {
         return processor.processingStatus().values.any { status -> status.isReplaying }
     }
 }
+
+@Serdeable
+data class SegmentOperationResult(
+    val operation: String,
+    val segmentId: Int,
+    val success: Boolean,
+    val errorMessage: String? = null
+)
+
+@Serdeable
+data class ScaleResultResponse(
+    val name: String,
+    val status: String,
+    val message: String,
+    val operations: List<SegmentOperationResult>
+)
 
 @Serdeable
 data class ProjectionInfo(
