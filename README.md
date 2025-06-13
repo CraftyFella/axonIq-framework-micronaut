@@ -106,6 +106,11 @@ docker-compose up -d
 
 3. The application will be available at http://localhost:8080
 
+4. Try out the API:
+If using IntelliJ IDEA, open the [flights.http](./flights.http) file and use the built-in HTTP client to execute requests
+Look for the green "play" button next to each request in the file
+This provides a convenient way to test all API endpoints without additional tools
+
 ### Environment Variables for Axon Console
 
 If you want to connect to Axon Console, set the following environment variables:
