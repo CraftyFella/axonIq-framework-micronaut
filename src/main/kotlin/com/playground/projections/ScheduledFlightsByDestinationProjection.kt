@@ -4,6 +4,7 @@ import com.playground.FlightEvent
 import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.config.ProcessingGroup
+import org.axonframework.eventhandling.DisallowReplay
 import org.axonframework.eventhandling.EventHandler
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -37,6 +38,7 @@ class ScheduledFlightsByDestinationProjection(private val connectionProvider: Co
     }
 
     @EventHandler
+    @DisallowReplay
     fun on(event: FlightEvent.FlightScheduledEvent) {
         log.debug("DestinationProjection: Flight ${event.flightId} scheduled to ${event.destination}")
         insertFlight(event.flightId, event.destination)

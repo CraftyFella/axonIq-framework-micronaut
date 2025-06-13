@@ -29,6 +29,7 @@ class FlightDetailsQueryHandler(private val connectionProvider: ConnectionProvid
                 ps.executeQuery().use { rs ->
                     if (rs.next()) {
                         val flightId = rs.getString("id")
+                        val flightNumber = rs.getString("flight_number")
                         val status = rs.getString("status")
                         val origin = rs.getString("origin")
                         val destination = rs.getString("destination")
@@ -43,6 +44,7 @@ class FlightDetailsQueryHandler(private val connectionProvider: ConnectionProvid
 
                         return FlightDetailsResponse(
                             flightId = flightId,
+                            flightNumber = flightNumber,
                             status = status,
                             origin = origin,
                             destination = destination,
@@ -51,10 +53,7 @@ class FlightDetailsQueryHandler(private val connectionProvider: ConnectionProvid
                         )
                     }
 
-                    return FlightDetailsResponse(
-                        flightId = query.flightId,
-                        status = "NOT_FOUND"
-                    )
+                    throw IllegalArgumentException("Flight with ID ${query.flightId} not found")
                 }
             }
         }

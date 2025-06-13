@@ -82,7 +82,7 @@ class FlightController(
 	@Post
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	fun scheduleFlight(@Body request: ScheduleFlightRequest): HttpResponse<CommandResponse> {
+	fun scheduleFlight(@Body request: ScheduleFlightRequest): HttpResponse<FlightDetailsResponse> {
 		val flightId = request.flightId ?: java.util.UUID.randomUUID().toString()
 		val origin = request.origin ?: randomAirport()
 		val destination = request.destination ?: randomAirport().let {
@@ -96,34 +96,47 @@ class FlightController(
 			origin = origin,
 			destination = destination
 		)
-		val result = commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
-		return HttpResponse.created(CommandResponse(result, flightId))
+		commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
+		val response = FlightDetailsResponse(
+			flightId,
+			flightNumber = flightNumber,
+			origin = origin,
+			destination = destination,
+			status = "SCHEDULED"
+		)
+		return HttpResponse.created(response)
 	}
 
 	@Patch("/{flightId}/delay")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	fun delayFlight(flightId: String, @Body request: DelayFlightRequest): HttpResponse<CommandResponse> {
+	fun delayFlight(flightId: String, @Body request: DelayFlightRequest): HttpResponse<DelayFlightResponse> {
 		val reason = request.reason ?: delayReasons[Random.nextInt(delayReasons.size)]
 		val command = FlightCommand.DelayFlightCommand(
 			flightId = flightId,
 			reason = reason
 		)
-		val result = commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
-		return HttpResponse.ok(CommandResponse(result, flightId))
+		commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
+		return HttpResponse.ok(DelayFlightResponse(
+			flightId = flightId,
+			delayReasons = listOf(reason)
+		))
 	}
 
 	@Patch("/{flightId}/cancel")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	fun cancelFlight(flightId: String, @Body request: CancelFlightRequest): HttpResponse<CommandResponse> {
+	fun cancelFlight(flightId: String, @Body request: CancelFlightRequest): HttpResponse<CancelFlightResponse> {
 		val reason = request.reason ?: cancelReasons[Random.nextInt(cancelReasons.size)]
 		val command = FlightCommand.CancelFlightCommand(
 			flightId = flightId,
 			reason = reason
 		)
-		val result = commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
-		return HttpResponse.ok(CommandResponse(result, flightId))
+		commandGateway.sendCommandAsSumType(command, FlightCommand::class.java)
+		return HttpResponse.ok(CancelFlightResponse(
+			flightId = flightId,
+			cancelReason = reason
+		))
 	}
 }
 
@@ -142,4 +155,15 @@ data class DelayFlightRequest(val reason: String? = null)
 data class CancelFlightRequest(val reason: String? = null)
 
 @Serdeable
-data class CommandResponse(val message: String, val flightId: String)
+data class CancelFlightResponse(
+	val flightId: String,
+	val status: String = "CANCELLED",
+	val cancelReason: String
+)
+
+@Serdeable
+data class DelayFlightResponse(
+	val flightId: String,
+	val status: String = "DELAYED",
+	val delayReasons: List<String>
+)

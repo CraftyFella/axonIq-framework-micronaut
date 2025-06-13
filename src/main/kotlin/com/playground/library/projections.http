@@ -4,12 +4,12 @@ Accept: application/json
 
 ### Replay a Specific Projection
 # Change the projection name as needed
-POST http://localhost:8080/admin/projections/ScheduledFlightsByOrigin/replay
+POST http://localhost:8080/admin/projections/ScheduledFlightsByDestination/replay
 Accept: application/json
 
 ### Check Status of a Specific Projection Directly
 # Change the projection name as needed
-GET http://localhost:8080/admin/projections/ScheduledFlightsByOrigin/status
+GET http://localhost:8080/admin/projections/ScheduledFlightsByDestination/status
 Accept: application/json
 
 ### Scale a Projection (increase segments)
@@ -19,6 +19,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "segmentCount": 6,
-  "threadCount": 6
+  "segmentCount": 1,
+  "threadCount": 1
 }

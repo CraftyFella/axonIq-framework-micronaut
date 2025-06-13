@@ -75,7 +75,7 @@ class FlightAggregateOption4 : DeciderAggregate<FlightState, FlightCommand, Flig
         command: FlightCommand.ScheduleFlightCommand
     ): List<FlightEvent> {
         return if (state is FlightState.EmptyFlight) {
-            listOf(FlightEvent.FlightScheduledEvent(command.flightId, command.origin, command.destination))
+            listOf(FlightEvent.FlightScheduledEvent(command.flightId, command.flightNumber, command.origin, command.destination))
         } else {
             listOf()
         }

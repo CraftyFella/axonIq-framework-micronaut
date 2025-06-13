@@ -23,7 +23,7 @@ sealed interface FlightCommand {
 
 sealed interface FlightEvent {
     val flightId: String
-    data class FlightScheduledEvent(override val flightId: String,  val origin: String, val destination: String) : FlightEvent
+    data class FlightScheduledEvent(override val flightId: String,  val flightNumber: String, val origin: String, val destination: String) : FlightEvent
     data class FlightDelayedEvent(override val flightId: String, val reason: String) : FlightEvent
     data class FlightCancelledEvent(override val flightId: String, val reason: String) : FlightEvent
 }
@@ -96,6 +96,7 @@ data class FlightsListResponse(
 @Serdeable
 data class FlightDetailsResponse(
     val flightId: String,
+    val flightNumber: String,
     val status: String,
     val origin: String? = null,
     val destination: String? = null,

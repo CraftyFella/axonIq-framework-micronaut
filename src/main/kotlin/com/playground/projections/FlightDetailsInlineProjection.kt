@@ -26,26 +26,27 @@ open class FlightDetailsInlineProjection(private val connectionProvider: Connect
 
     private fun createTablesIfNotExists() {
         val flightTableSql = """
-        CREATE TABLE IF NOT EXISTS flights (
-            id VARCHAR(255) PRIMARY KEY,
-            origin VARCHAR(100),
-            destination VARCHAR(100),
-            delay_count INT DEFAULT 0,
-            cancelled BOOLEAN DEFAULT FALSE,
-            status VARCHAR(20) DEFAULT 'SCHEDULED',
-            cancelled_reason TEXT,
-            version BIGINT DEFAULT 0
-        )
-    """
+            CREATE TABLE IF NOT EXISTS flights (
+                id VARCHAR(255) PRIMARY KEY,
+                flight_number VARCHAR(50),
+                origin VARCHAR(100),
+                destination VARCHAR(100),
+                delay_count INT DEFAULT 0,
+                cancelled BOOLEAN DEFAULT FALSE,
+                status VARCHAR(20) DEFAULT 'SCHEDULED',
+                cancelled_reason TEXT,
+                version BIGINT DEFAULT 0
+            )
+        """
 
         val delayTableSql = """
-        CREATE TABLE IF NOT EXISTS flight_delays (
-            id SERIAL PRIMARY KEY,
-            flight_id VARCHAR(255) REFERENCES flights(id),
-            reason TEXT,
-            delay_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """
+            CREATE TABLE IF NOT EXISTS flight_delays (
+                id SERIAL PRIMARY KEY,
+                flight_id VARCHAR(255) REFERENCES flights(id),
+                reason TEXT,
+                delay_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
 
         connectionProvider.connection.use { connection ->
             connection.createStatement().use { statement ->
@@ -58,25 +59,26 @@ open class FlightDetailsInlineProjection(private val connectionProvider: Connect
     @EventHandler
     fun on(event: FlightEvent.FlightScheduledEvent) {
         logger.debug("Projection3 Flight scheduled with id: ${event.flightId}")
-        insertFlight(event.flightId, event.origin, event.destination, "SCHEDULED")
+        insertFlight(event.flightId, event.flightNumber, event.origin, event.destination, "SCHEDULED")
     }
 
-    private fun insertFlight(flightId: String, origin: String, destination: String, status: String) {
+    private fun insertFlight(flightId: String, flightNumber: String, origin: String, destination: String, status: String) {
         val sql = """
-        INSERT INTO flights (id, origin, destination, delay_count, cancelled, status, version)
-        VALUES (?, ?, ?, 0, false, ?, 0)
-        ON CONFLICT (id) DO NOTHING
-    """
+    INSERT INTO flights (id, flight_number, origin, destination, delay_count, cancelled, status, version)
+    VALUES (?, ?, ?, ?, 0, false, ?, 0)
+    ON CONFLICT (id) DO NOTHING
+"""
 
         connectionProvider.connection.use { connection ->
             connection.prepareStatement(sql).use { ps ->
                 ps.setString(1, flightId)
-                ps.setString(2, origin)
-                ps.setString(3, destination)
-                ps.setString(4, status)
+                ps.setString(2, flightNumber)
+                ps.setString(3, origin)
+                ps.setString(4, destination)
+                ps.setString(5, status)
                 ps.executeUpdate()
-                logger.debug("Flight {} inserted with origin: {}, destination: {}, status: {}",
-                    flightId, origin, destination, status)
+                logger.debug("Flight {} inserted with number: {}, origin: {}, destination: {}, status: {}",
+                    flightId, flightNumber, origin, destination, status)
             }
         }
     }
@@ -92,7 +94,7 @@ open class FlightDetailsInlineProjection(private val connectionProvider: Connect
 
             // Update the flight status
             val flightDetails = getFlightDetails(connection, event.flightId)
-                ?: FlightDetails(0, false, 0, "", "")
+                ?: FlightDetails(0, false, 0, "", "", "")
 
             updateFlight(
                 connection,
@@ -115,7 +117,7 @@ open class FlightDetailsInlineProjection(private val connectionProvider: Connect
 
         connectionProvider.connection.use { connection ->
             val flightDetails = getFlightDetails(connection, event.flightId)
-                ?: FlightDetails(0, false, 0, "", "")
+                ?: FlightDetails(0, false, 0, "", "", "")
 
             updateFlight(
                 connection,
@@ -130,7 +132,7 @@ open class FlightDetailsInlineProjection(private val connectionProvider: Connect
     }
 
     private fun getFlightDetails(connection: Connection, flightId: String): FlightDetails? {
-        val sql = "SELECT delay_count, cancelled, version, origin, destination FROM flights WHERE id = ?"
+        val sql = "SELECT delay_count, cancelled, version, origin, destination, flight_number FROM flights WHERE id = ?"
 
         connection.prepareStatement(sql).use { ps ->
             ps.setString(1, flightId)
@@ -141,7 +143,8 @@ open class FlightDetailsInlineProjection(private val connectionProvider: Connect
                         cancelled = rs.getBoolean("cancelled"),
                         version = rs.getLong("version"),
                         origin = rs.getString("origin"),
-                        destination = rs.getString("destination")
+                        destination = rs.getString("destination"),
+                        flightNumber = rs.getString("flight_number")
                     )
                 }
             }
@@ -154,7 +157,8 @@ open class FlightDetailsInlineProjection(private val connectionProvider: Connect
         val cancelled: Boolean,
         val version: Long,
         val origin: String,
-        val destination: String
+        val destination: String,
+        val flightNumber: String
     )
 
 
