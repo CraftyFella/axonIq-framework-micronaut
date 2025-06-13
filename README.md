@@ -87,7 +87,7 @@ Location: [Flight Controller](./src/main/kotlin/com/playground/FlightController.
 ## Getting Started
 
 ### Prerequisites
-- JDK 17+
+- JDK 21+
 - Docker and Docker Compose (for Postgres)
 - Gradle
 
