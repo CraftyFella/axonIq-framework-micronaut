@@ -1,7 +1,8 @@
 # Flight Management System with Axon Framework and Micronaut
 
-This project demonstrates integration of Axon Framework with Micronaut for event sourcing and CQRS, using Postgres as the event store and projection database. The application is a flight management system that allows scheduling, delaying, and canceling flights.
+[![CI](https://github.com/CraftyFella/AxonFrameworkMicronaut/actions/workflows/ci.yml/badge.svg)](https://github.com/CraftyFella/AxonFrameworkMicronaut/actions/workflows/ci.yml)
 
+This project demonstrates integration of Axon Framework with Micronaut for event sourcing and CQRS, using Postgres as the event store and projection database. The application is a flight management system that allows scheduling, delaying, and canceling flights.
 ## Overview
 
 This playground project showcases various Axon Framework features in a Micronaut environment. The system uses event sourcing to track and record all changes to flights, enabling accurate historical views and robust projections.
