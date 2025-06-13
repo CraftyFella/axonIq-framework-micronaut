@@ -201,6 +201,7 @@ You can find example API calls in the [flights.http](./flights.http) file, which
 
 ### Future Improvements
 
+- 📝 Test out Axon's [Dead letter queue support](https://docs.axoniq.io/axon-framework-reference/4.11/events/event-processors/dead-letter-queue/)
 - 📝 Transaction Manager integration with [Micronaut Data](https://micronaut-projects.github.io/micronaut-data/latest/guide/)
 
 ## Testing DSL
