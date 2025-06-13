@@ -1,4 +1,4 @@
 
 
-rootProject.name="axon-cart-mongo"
+rootProject.name="axon-framework-micronaut"
 
