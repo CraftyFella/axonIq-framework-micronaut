@@ -5,6 +5,9 @@ plugins {
     id("io.micronaut.application") version "4.5.3"
     id("com.gradleup.shadow") version "8.3.6"
     id("io.micronaut.aot") version "4.5.3"
+
+    // Add Gatling plugin
+    id("io.gatling.gradle") version "3.14.3"
 }
 
 version = "0.1"
@@ -50,8 +53,9 @@ dependencies {
 
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
-}
+    testImplementation("org.awaitility:awaitility-kotlin:4.2.0")
 
+}
 
 application {
     mainClass = "com.playground.ApplicationKt"

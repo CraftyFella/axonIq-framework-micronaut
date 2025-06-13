@@ -1,11 +1,13 @@
 # Axon with Micronaut and Postgres
 
+This project is a playgound for Axon Framework with Micronaut and Postgres. It is designed to explore the capabilities of Axon in a Micronaut environment.
+
 ## Features
 
 ### Done
 
 * ~~Try out Live projections (use event store to read events directly)~~
-* ~~subscribing event processor (same thread)~~
+* ~~subscribing event processor (same UOW)~~
 * ~~Streaming event processor (background thread)~~
 * ~~Try out snapshots~~
 * ~~Try out sagas~~
@@ -23,9 +25,9 @@
 * ~~Replay projections (streaming)~~
 * ~~Multi node projections (leadership)~~
 * ~~Scale out projections (Sharding projections)~~
+* ~~Load Test~~
 ### To Do
 
-* Load Test
 * Transaction Manager playing nicely with Micronaut data (Nice to have, can work around this TBH)
 
 ## Deciders

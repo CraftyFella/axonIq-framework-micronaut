@@ -27,7 +27,7 @@ class FlightAggregateOption1() {
     @CreationPolicy(AggregateCreationPolicy.CREATE_IF_MISSING)
     fun handle(command: FlightCommand.ScheduleFlightCommand): String {
         if (state is FlightState.EmptyFlight) {
-            AggregateLifecycle.apply(FlightEvent.FlightScheduledEvent(command.flightId, command.origin, command.destination))
+            AggregateLifecycle.apply(FlightEvent.FlightScheduledEvent(command.flightId, command.flightNumber, command.origin, command.destination))
             return "Flight scheduled with id: ${command.flightId}"
         } else {
             return "Flight scheduled with id: ${command.flightId} again"
