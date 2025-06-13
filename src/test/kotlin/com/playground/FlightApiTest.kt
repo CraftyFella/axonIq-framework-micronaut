@@ -117,9 +117,9 @@ class FlightApiTest: TestPropertyProvider {
         flightApi.awaitFlightByOrigin(origin, scheduled.flightId)
 
         // Check a different origin returns empty list
-        val otherOriginFlights = flightApi.getFlightsByOrigin("LAX")
+        val otherOriginFlights = flightApi.getFlightsByOrigin("XXX")
         Assertions.assertTrue(otherOriginFlights.flights.isEmpty(),
-            "Flights by origin LAX should be empty since we scheduled a flight with origin LHR")
+            "Flights by origin XXX should be empty since we scheduled a flight with origin LHR")
     }
 
     @Test
@@ -132,9 +132,9 @@ class FlightApiTest: TestPropertyProvider {
         flightApi.awaitFlightByDestination(destination, scheduled.flightId)
 
         // Check a different destination returns empty list
-        val otherDestinationFlights = flightApi.getFlightsByDestination("CDG")
+        val otherDestinationFlights = flightApi.getFlightsByDestination("XXX")
         Assertions.assertTrue(otherDestinationFlights.flights.isEmpty(),
-            "Flights by destination CDG should be empty since we scheduled a flight with destination SYD")
+            "Flights by destination XXX should be empty since we scheduled a flight with destination SYD")
     }
 
     override fun getProperties(): @NonNull Map<String?, String?>? {
