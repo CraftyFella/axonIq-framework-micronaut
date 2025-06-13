@@ -40,17 +40,22 @@ All state changes are recorded as events, providing a complete audit trail of al
 ### Projections
 The system includes several types of projections:
 
-1. **Inline Projection** - Updates the read model in the same transaction as the event is processed
+1. **Inline Projection** - Updates the read model in the same transaction as the event is processed using Subscribing Event Processors
    Location: [Flight Details Projection](./src/main/kotlin/com/playground/projections/FlightDetailsInlineProjection.kt)
 
-2. **Origin Projection** - Maintains a list of flights by origin airport
-3. **Destination Projection** - Maintains a list of flights by destination airport
+2. **Origin Projection** - Maintains a list of flights by origin airport with eventual consistency using Streaming Event Processors
+   Location: [Origin Projection](./src/main/kotlin/com/playground/projections/ScheduledFlightsByOriginProjection.kt)
+
+3. **Destination Projection** - Maintains a list of flights by destination airport with eventual consistency using Streaming Event Processors
+   Location: [Destination Projection](./src/main/kotlin/com/playground/projections/ScheduledFlightsByDestinationProjection.kt)
+
+The configuration for these processors is defined in [AppConfigurer](./src/main/kotlin/com/playground/AppConfigurer.kt).
 
 ```mermaid
 flowchart TD
-    Events[Flight Events] --> InlineProjection[Inline Projection]
-    Events --> OriginProjection[Origin Projection]
-    Events --> DestinationProjection[Destination Projection]
+    Events[Flight Events] --> InlineProjection[Inline Projection<br>Subscribing Processor]
+    Events --> OriginProjection[Origin Projection<br>Streaming Processor]
+    Events --> DestinationProjection[Destination Projection<br>Streaming Processor]
     
     InlineProjection --> FlightDetails[(Flight Details Table)]
     OriginProjection --> OriginIndex[(Origin Index)]
@@ -62,6 +67,10 @@ flowchart TD
     
     QueryHandler --> API[REST API]
 ```
+
+#### Event Processor Types
+- **Subscribing Event Processors** - Process events synchronously in the publishing thread, providing immediate consistency but potentially impacting performance. [Axon Docs](https://docs.axoniq.io/axon-framework-reference/4.10/events/event-processors/subscribing/)
+- **Streaming Event Processors** - Process events asynchronously from the event store, providing better scalability and resilience but with eventual consistency. [Axon Docs](https://docs.axoniq.io/axon-framework-reference/4.10/events/event-processors/streaming/)
 
 ### Query Handlers
 Location: [Flight Details Query Handler](./src/main/kotlin/com/playground/queries/FlightDetailsQueryHandler.kt)
@@ -84,9 +93,10 @@ Location: [Flight Controller](./src/main/kotlin/com/playground/FlightController.
 
 ### Running the Application
 
-1. Start Postgres:
+1. Start Postgres and Aspire for Open telemetry::
 ```bash
-docker-compose up -d postgres
+cd ./docker
+docker-compose up -d
 ```
 
 2. Build and run the application:
@@ -98,13 +108,15 @@ docker-compose up -d postgres
 
 ### Environment Variables for Axon Console
 
-To connect to Axon Console, set the following environment variables:
+If you want to connect to Axon Console, set the following environment variables:
 
 ```
 AXON_CONSOLE_CREDENTIALS=your_credentials_here
 AXON_CONSOLE_CLIENT_ID=your_client_id
 AXON_CONSOLE_CLIENT_SECRET=your_client_secret
 ```
+
+If you don't set these environment variables, the code will not attempt to connect to the Axon Console.
 
 ### Testing
 
@@ -192,6 +204,11 @@ The Command Query Responsibility Segregation pattern separates write operations 
 
 ### Eventual Consistency
 Projections are eventually consistent with the event store, which allows for high scalability but requires careful testing to handle the consistency delay.
+
+#### Consistency Choices
+
+- **Strong Consistency** - The Flight Details projection uses subscribing event processors to provide immediate consistency for critical flight information.
+- **Eventual Consistency** - The Origin and Destination projections use streaming event processors for better scalability and parallel processing, with configurable thread counts and segments in the [AppConfigurer](./src/main/kotlin/com/playground/AppConfigurer.kt).
 
 ## Additional Resources
 
