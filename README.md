@@ -27,12 +27,32 @@ The system uses the Decider pattern to separate decision logic from state change
 
 Location: [Flight Aggregate](./src/main/kotlin/com/playground/aggregate/FlightAggregateOption3.kt)
 
+The Decider interface defines the core operations:
+
+```kotlin
+interface Decider<TState, TCommand, TEvent> {
+    fun decide(state: TState, command: TCommand): List<TEvent>
+    fun evolve(state: TState, event: TEvent): TState
+    fun initialState(): TState
+    fun streamId(event: TEvent): String
+}
+```
+#### Decide
+
 ```mermaid
 graph LR
     Command[Command] --> Decider[Decider]
     State[Current State] --> Decider
-    Decider --> |Decide| Events[Events]
-    Events --> |Apply| NewState[New State]
+    Decider --> |decide()| Events[Events]
+```
+
+#### Evolve
+
+```mermaid
+graph LR
+    State[Current State] --> Evolve[evolve()]
+    Events[Events] --> Evolve
+    Evolve --> NewState[New State]
 ```
 
 ### Event Sourcing
