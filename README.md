@@ -2,10 +2,10 @@
 
 [![CI](https://github.com/CraftyFella/AxonFrameworkMicronaut/actions/workflows/ci.yml/badge.svg)](https://github.com/CraftyFella/AxonFrameworkMicronaut/actions/workflows/ci.yml)
 
-This project demonstrates integration of Axon Framework with Micronaut for event sourcing and CQRS, using Postgres as the event store and projection database. The application is a flight management system that allows scheduling, delaying, and canceling flights.
+This project demonstrates integration of [Axon Framework](https://docs.axoniq.io/reference-guide/) with [Micronaut](https://docs.micronaut.io/latest/guide/) for event sourcing and CQRS, using Postgres as the event store and projection database. The application is a flight management system that allows scheduling, delaying, and canceling flights.
 ## Overview
 
-This playground project showcases various Axon Framework features in a Micronaut environment. The system uses event sourcing to track and record all changes to flights, enabling accurate historical views and robust projections.
+This playground project showcases various [Axon Framework](https://docs.axoniq.io/reference-guide/) features in a [Micronaut](https://docs.micronaut.io/latest/guide/) application. The system uses event sourcing to track and record all changes to flights, enabling accurate historical views and robust projections.
 
 ```mermaid
 graph TD
@@ -114,7 +114,7 @@ This provides a convenient way to test all API endpoints without additional tool
 
 ### Environment Variables for Axon Console
 
-If you want to connect to Axon Console, set the following environment variables:
+If you want to connect to [Axon Console](https://console.axoniq.io/), set the following environment variables:
 
 ```
 AXON_CONSOLE_CREDENTIALS=your_credentials_here
@@ -122,7 +122,7 @@ AXON_CONSOLE_CLIENT_ID=your_client_id
 AXON_CONSOLE_CLIENT_SECRET=your_client_secret
 ```
 
-If you don't set these environment variables, the code will not attempt to connect to the Axon Console.
+If you don't set these environment variables, the code will not attempt to connect to the [Axon Console](https://console.axoniq.io/).
 
 ### Testing
 
@@ -181,7 +181,7 @@ You can find example API calls in the [flights.http](./flights.http) file, which
 
 ### Future Improvements
 
-- 📝 Transaction Manager integration with Micronaut Data
+- 📝 Transaction Manager integration with [Micronaut Data](https://micronaut-projects.github.io/micronaut-data/latest/guide/)
 
 ## Testing DSL
 
