@@ -40,19 +40,19 @@ interface Decider<TState, TCommand, TEvent> {
 #### Decide
 
 ```mermaid
-graph LR
+flowchart LR
     Command[Command] --> Decider[Decider]
     State[Current State] --> Decider
-    Decider --> |decide()| Events[Events]
+    Decider --> |Decide| Events[Events]
 ```
 
 #### Evolve
 
 ```mermaid
-graph LR
-    State[Current State] --> Evolve[evolve()]
-    Events[Events] --> Evolve
-    Evolve --> NewState[New State]
+flowchart LR
+    Events[Events] --> Evolver[Evolver]
+    State[Current State] --> Evolver
+    Evolver --> |Evolve| NewState[NewState]
 ```
 
 ### Event Sourcing
