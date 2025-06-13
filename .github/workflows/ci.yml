@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: "Build & Test"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - name: "Checkout ${{ github.ref }} from ${{ github.repository }}"
+        uses: actions/checkout@v4
+
+      - name: "Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: "Setup Java"
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: "Build and analyze"
+        shell: bash
+        run: |
+          ./gradlew test --info
+
+      - name: "Upload Test Results"
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/test*
+          if-no-files-found: error
