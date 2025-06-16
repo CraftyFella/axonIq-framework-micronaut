@@ -4,16 +4,16 @@ import com.playground.FlightEvent
 import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.config.ProcessingGroup
-import org.axonframework.eventhandling.DisallowReplay
 import org.axonframework.eventhandling.EventHandler
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 @Singleton
-@ProcessingGroup("ScheduledFlightsByDestination")
+@ProcessingGroup(ScheduledFlightsByDestinationProjection.NAME)
 class ScheduledFlightsByDestinationProjection(private val connectionProvider: ConnectionProvider) {
 
     companion object {
+        const val NAME = "ScheduledFlightsByDestination"
         val log: Logger = LoggerFactory.getLogger(ScheduledFlightsByDestinationProjection::class.java)
     }
 
@@ -38,10 +38,12 @@ class ScheduledFlightsByDestinationProjection(private val connectionProvider: Co
     }
 
     @EventHandler
-    @DisallowReplay
     fun on(event: FlightEvent.FlightScheduledEvent) {
         log.debug("DestinationProjection: Flight ${event.flightId} scheduled to ${event.destination}")
         insertFlight(event.flightId, event.destination)
+        if (event.flightId.startsWith("bang")) {
+            throw IllegalArgumentException("Flight ID cannot start with 'bang'")
+        }
     }
 
     @EventHandler

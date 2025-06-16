@@ -2,7 +2,10 @@ package com.playground
 
 import com.playground.aggregate.FlightAggregateOption3
 import com.playground.library.ApplicationConfigurer
+import com.playground.library.DeadLetterQueueFactory
 import com.playground.library.MicronautAggregateConfigurer
+import com.playground.library.configureAggregateUsingConfigurer
+import com.playground.library.registerDeadLetterQueueUsingFactory
 import com.playground.projections.CancelledFlightsCounterProjection
 import com.playground.projections.FlightDetailsInlineProjection
 import com.playground.projections.ScheduledFlightsByDestinationProjection
@@ -26,27 +29,34 @@ class FlightApplicationConfigurer(
     private val scheduledFlightsByDestinationProjection: ScheduledFlightsByDestinationProjection,
     private val flightDetailsInlineProjection: FlightDetailsInlineProjection,
     private val cancelledFlightsCounterProjection: CancelledFlightsCounterProjection,
-    private val aggregateFactoryHelper: MicronautAggregateConfigurer,
+    private val aggregateConfigurer: MicronautAggregateConfigurer,
+    private val deadLetterQueueFactory: DeadLetterQueueFactory
 ) : ApplicationConfigurer {
     override fun configure(configurer: Configurer): Configurer {
         return configurer
-            .configureAggregate(aggregateFactoryHelper.configurationFor(FlightAggregateOption3::class.java))
+            .configureAggregateUsingConfigurer(aggregateConfigurer, FlightAggregateOption3::class.java)
             .registerQueryHandler { allFlightsQueryHandler }
             .registerQueryHandler { flightDetailsQueryHandler }
             .registerQueryHandler { flightsByOriginQueryHandler }
             .registerQueryHandler { flightsByDestinationQueryHandler }
             .eventProcessing { processingConfigurer ->
                 processingConfigurer
+                    //.registerDefaultListenerInvocationErrorHandler { PropagatingErrorHandler.INSTANCE }
                     // inline projection
                     .registerSubscribingEventProcessor(FlightDetailsInlineProjection.NAME)
                     .registerListenerInvocationErrorHandler(FlightDetailsInlineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerEventHandler { flightDetailsInlineProjection }
                     // Asynchronous projections
-                    .registerTrackingEventProcessorConfiguration("ScheduledFlightsByOrigin") {
+                    .registerListenerInvocationErrorHandler(ScheduledFlightsByDestinationProjection.NAME) { PropagatingErrorHandler.INSTANCE }
+                    .registerTrackingEventProcessorConfiguration(ScheduledFlightsByDestinationProjection.NAME) {
                         TrackingEventProcessorConfiguration
                             .forParallelProcessing(2)
                             .andInitialSegmentsCount(2)
                     }
+                    .registerDeadLetterQueueUsingFactory(
+                        deadLetterQueueFactory = deadLetterQueueFactory,
+                        processingGroup = ScheduledFlightsByDestinationProjection.NAME
+                    )
                     .registerEventHandler { scheduledFlightsByOriginProjection }
                     .registerEventHandler { scheduledFlightsByDestinationProjection }
                     .registerEventHandler { cancelledFlightsCounterProjection }

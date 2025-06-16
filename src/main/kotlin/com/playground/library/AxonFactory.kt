@@ -97,7 +97,6 @@ class AxonFactory() {
         return sagaStore
     }
 
-
     @Singleton
     fun tracer(otel: OpenTelemetry): Tracer {
         return otel.getTracer("AxonFramework-OpenTelemetry")
@@ -143,7 +142,6 @@ class AxonFactory() {
                 config
                     .registerTokenStore { _ -> tokenStore }
                     .registerSagaStore { _ -> sagaStore }
-
             }
 
         axoniqConsoleConfigurerModule?.configureModule(configurer)
