@@ -201,8 +201,15 @@ You can find example API calls in the [flights.http](./flights.http) file, which
 
 ### Future Improvements
 
-- 📝 Test out Axon's [Dead letter queue support](https://docs.axoniq.io/axon-framework-reference/4.11/events/event-processors/dead-letter-queue/)
 - 📝 Transaction Manager integration with [Micronaut Data](https://micronaut-projects.github.io/micronaut-data/latest/guide/)
+- 📝 Get Steaming Projections to roll back their changes on error
+
+### Work in Progress
+
+- 📝 Test out Axon's [Dead letter queue support](https://docs.axoniq.io/axon-framework-reference/4.11/events/event-processors/dead-letter-queue/)
+
+- The contents is NOT visible in the console, only the count. Not sure why?
+- Get the replay working from the dead letter queue
 
 ## Testing DSL
 

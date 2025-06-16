@@ -11,7 +11,7 @@ import java.sql.Connection
 import java.sql.Types
 
 @Singleton
-@ProcessingGroup(FlightDetailsInlineProjection.Companion.NAME)
+@ProcessingGroup(FlightDetailsInlineProjection.NAME)
 open class FlightDetailsInlineProjection(private val connectionProvider: ConnectionProvider) {
 
     companion object {

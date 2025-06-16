@@ -4,6 +4,7 @@ import io.micronaut.context.BeanContext
 import io.micronaut.inject.BeanDefinition
 import jakarta.inject.Singleton
 import org.axonframework.config.AggregateConfigurer
+import org.axonframework.config.Configurer
 import org.axonframework.eventsourcing.EventCountSnapshotTriggerDefinition
 import org.axonframework.eventsourcing.GenericAggregateFactory
 
@@ -65,3 +66,11 @@ class MicronautAggregateConfigurer(
             }
     }
 }
+
+// Extension function for configureAggregate
+fun <T> Configurer.configureAggregateUsingConfigurer(
+    configurer: MicronautAggregateConfigurer,
+    aggregateType: Class<T>,
+    maxSequences: Int = 100,
+    maxSequenceSize: Int = 1000
+): Configurer = this.configureAggregate(configurer.configurationFor(aggregateType))

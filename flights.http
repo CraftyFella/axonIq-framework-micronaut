@@ -20,9 +20,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "flightNumber": "FL1234",
-  "origin": "JFK",
-  "destination": "LHR"
+  "flightId": "bang6"
 }
 
 ### Schedule a new flight with auto-generated values
