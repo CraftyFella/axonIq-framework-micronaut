@@ -4,7 +4,7 @@ import com.playground.aggregate.FlightAggregateOption3
 import com.playground.library.ApplicationConfigurer
 import com.playground.library.DeadLetterQueueFactory
 import com.playground.library.MicronautAggregateConfigurer
-import com.playground.library.configureAggregateUsingConfigurer
+import com.playground.library.registerAggregateUsingConfigurer
 import com.playground.library.registerDeadLetterQueueUsingFactory
 import com.playground.projections.CancelledFlightsCounterProjection
 import com.playground.projections.FlightDetailsInlineProjection
@@ -16,8 +16,12 @@ import com.playground.queries.FlightsByDestinationQueryHandler
 import com.playground.queries.FlightsByOriginQueryHandler
 import jakarta.inject.Singleton
 import org.axonframework.config.Configurer
+import org.axonframework.eventhandling.ListenerInvocationErrorHandler
 import org.axonframework.eventhandling.PropagatingErrorHandler
 import org.axonframework.eventhandling.TrackingEventProcessorConfiguration
+import org.axonframework.eventhandling.async.SequentialPolicy
+import org.axonframework.eventhandling.deadletter.DeadLetteringEventHandlerInvoker
+import java.time.Duration
 
 @Singleton
 class FlightApplicationConfigurer(
@@ -34,7 +38,7 @@ class FlightApplicationConfigurer(
 ) : ApplicationConfigurer {
     override fun configure(configurer: Configurer): Configurer {
         return configurer
-            .configureAggregateUsingConfigurer(aggregateConfigurer, FlightAggregateOption3::class.java)
+            .registerAggregateUsingConfigurer(aggregateConfigurer, FlightAggregateOption3::class.java)
             .registerQueryHandler { allFlightsQueryHandler }
             .registerQueryHandler { flightDetailsQueryHandler }
             .registerQueryHandler { flightsByOriginQueryHandler }

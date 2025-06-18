@@ -20,7 +20,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "flightId": "bang6"
+  "flightId": "bang-60"
 }
 
 ### Schedule a new flight with auto-generated values

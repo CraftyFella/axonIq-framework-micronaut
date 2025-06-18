@@ -68,7 +68,7 @@ class MicronautAggregateConfigurer(
 }
 
 // Extension function for configureAggregate
-fun <T> Configurer.configureAggregateUsingConfigurer(
+fun <T> Configurer.registerAggregateUsingConfigurer(
     configurer: MicronautAggregateConfigurer,
     aggregateType: Class<T>,
     maxSequences: Int = 100,

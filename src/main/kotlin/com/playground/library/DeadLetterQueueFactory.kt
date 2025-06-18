@@ -1,15 +1,21 @@
 package com.playground.library
 
+import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.transaction.TransactionManager
 import org.axonframework.config.EventProcessingConfigurer
 import org.axonframework.eventhandling.EventMessage
+import org.axonframework.eventhandling.deadletter.jdbc.GenericDeadLetterTableFactory
 import org.axonframework.eventhandling.deadletter.jdbc.JdbcSequencedDeadLetterQueue
+import org.axonframework.messaging.deadletter.DeadLetter
+import org.axonframework.messaging.deadletter.Decisions
+import org.axonframework.messaging.deadletter.EnqueueDecision
+import org.axonframework.messaging.deadletter.EnqueuePolicy
 import org.axonframework.messaging.deadletter.SequencedDeadLetterQueue
 import org.axonframework.serialization.Serializer
-import jakarta.inject.Singleton
-import org.axonframework.eventhandling.deadletter.jdbc.GenericDeadLetterTableFactory
 import org.slf4j.LoggerFactory
+import java.util.function.Function
+
 
 @Singleton
 class DeadLetterQueueFactory(
@@ -69,11 +75,32 @@ fun EventProcessingConfigurer.registerDeadLetterQueueUsingFactory(
     maxSequences: Int = 100,
     maxSequenceSize: Int = 1000
 ): EventProcessingConfigurer {
-    return this.registerDeadLetterQueue(processingGroup) {
+    return this
+        .registerDeadLetterPolicy(processingGroup) { EnqueueOnlyIfException() }
+        .registerDeadLetterQueue(processingGroup) {
         deadLetterQueueFactory.create(
             processingGroup = processingGroup,
             maxSequences = maxSequences,
             maxSequenceSize = maxSequenceSize
         )
+    }
+}
+
+class EnqueueOnlyIfException : EnqueuePolicy<EventMessage<*>?> {
+    override fun decide(
+        letter: DeadLetter<out EventMessage<*>?>,
+        cause: Throwable?
+    ): EnqueueDecision<EventMessage<*>?> {
+        if (cause == null) {
+            return Decisions.doNotEnqueue<EventMessage<*>?>()
+        }
+        val retries = letter.diagnostics().getOrDefault("retries", -1) as Int
+        if (retries < 10) {
+            // Let's continue and increase retries:
+            return Decisions.requeue<EventMessage<*>?>(
+                cause
+            ) { l: DeadLetter<out EventMessage<*>?>? -> l!!.diagnostics().and("retries", retries + 1) }
+        }
+        return Decisions.enqueue<EventMessage<*>?>(cause)
     }
 }
