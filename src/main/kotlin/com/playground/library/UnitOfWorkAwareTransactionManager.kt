@@ -12,13 +12,13 @@ class UnitOfWorkAwareTransactionManager(private val connectionProvider: Connecti
 
 	override fun startTransaction(): Transaction {
 
-		val isInActiveUnitOfWork = CurrentUnitOfWork.isStarted() && !CurrentUnitOfWork.get().phase()
-			.isAfter(UnitOfWork.Phase.PREPARE_COMMIT)
-
-		if (isInActiveUnitOfWork) {
-            val connection = connectionProvider.connection
-            connection.autoCommit = false
-        }
+//		val isInActiveUnitOfWork = CurrentUnitOfWork.isStarted() && !CurrentUnitOfWork.get().phase()
+//			.isAfter(UnitOfWork.Phase.PREPARE_COMMIT)
+//
+//		if (isInActiveUnitOfWork) {
+//            val connection = connectionProvider.connection
+//            connection.autoCommit = false
+//        }
 
 		return NoTransaction()
 	}

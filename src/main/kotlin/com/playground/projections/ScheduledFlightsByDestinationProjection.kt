@@ -5,8 +5,14 @@ import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.config.ProcessingGroup
 import org.axonframework.eventhandling.EventHandler
+import org.axonframework.eventhandling.EventMessage
+import org.axonframework.messaging.InterceptorChain
+import org.axonframework.messaging.interceptors.MessageHandlerInterceptor
+import org.axonframework.messaging.unitofwork.UnitOfWork
+import org.axonframework.queryhandling.QueryMessage
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
 
 @Singleton
 @ProcessingGroup(ScheduledFlightsByDestinationProjection.NAME)
@@ -50,6 +56,34 @@ class ScheduledFlightsByDestinationProjection(private val connectionProvider: Co
     fun on(event: FlightEvent.FlightCancelledEvent) {
         log.debug("DestinationProjection: Flight ${event.flightId} cancelled")
         removeFlight(event.flightId)
+    }
+
+    @MessageHandlerInterceptor(messageType = EventMessage::class)
+    fun intercept(
+        unitOfWork: UnitOfWork<out EventMessage<*>>,
+        interceptorChain: InterceptorChain
+    ): Any? {
+
+        try {
+            log.debug("Intercepting event: ${unitOfWork.message.payloadType.name}")
+
+            unitOfWork.onPrepareCommit { uow ->
+                log.debug("onPrepareCommit for event: ${uow.message.payloadType.name}")
+            }
+            unitOfWork.onCommit { uow ->
+                log.debug("onCommit for event: ${uow.message.payloadType.name}")
+            }
+            unitOfWork.onRollback { uow ->
+                log.debug("Preparing rollback for event: ${uow.message.payloadType.name}")
+            }
+            val result = interceptorChain.proceed()
+            log.debug("Intercepted event: ${unitOfWork.message.payloadType.name}")
+            return result
+        } catch (e: Exception) {
+            log.error("Error logging event type", e)
+            unitOfWork.rollback()
+            throw e
+        }
     }
 
     private fun insertFlight(flightId: String, destination: String) {
