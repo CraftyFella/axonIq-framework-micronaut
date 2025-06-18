@@ -8,6 +8,8 @@ import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.common.jdbc.DataSourceConnectionProvider
 import org.axonframework.common.jdbc.UnitOfWorkAwareConnectionProviderWrapper
+import org.axonframework.common.transaction.NoTransactionManager
+import org.axonframework.common.transaction.TransactionManager
 import org.axonframework.messaging.unitofwork.CurrentUnitOfWork
 import org.axonframework.messaging.unitofwork.UnitOfWork
 import java.sql.Connection
@@ -23,6 +25,9 @@ class DbConfig {
 
 @Factory
 class UnitOfWorkAwareConnectionProviderFactory {
+
+    @Singleton
+    fun transactionManager(): TransactionManager = NoTransactionManager.INSTANCE
 
     @Singleton
     fun dataSource(dbConfig: DbConfig): DataSource {
