@@ -1,20 +1,17 @@
 package com.playground
 
 import com.playground.library.DeadLetterQueueFactory
-import com.playground.projections.ScheduledFlightsByDestinationProjection
 import io.micronaut.core.annotation.NonNull
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.test.support.TestPropertyProvider
 import jakarta.inject.Inject
-import org.awaitility.Awaitility
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.PostgreSQLContainer
-import java.time.Duration
 import java.util.*
 
 @MicronautTest
@@ -36,7 +33,7 @@ class FlightApiTest: TestPropertyProvider {
 
     @BeforeEach
     fun setup() {
-        flightApi = client.flights()
+        flightApi = client.flights(deadLetterQueueFactory)
     }
 
     @Test
@@ -150,9 +147,6 @@ class FlightApiTest: TestPropertyProvider {
         val flightId = "bang-flight-${UUID.randomUUID()}"
         val destination = "DLQ-TEST"
 
-        // Create a DLQ instance for the specific processing group
-        val dlq = deadLetterQueueFactory.create(ScheduledFlightsByDestinationProjection.NAME)
-
         // Act - Schedule a flight that will cause an exception in the projection
         flightApi.scheduleFlight(
             flightId = flightId,
@@ -165,21 +159,7 @@ class FlightApiTest: TestPropertyProvider {
         Assertions.assertEquals("SCHEDULED", details.status)
 
         // Wait for the event to appear in the DLQ
-        Awaitility.await()
-            .atMost(Duration.ofSeconds(5))
-            .pollInterval(Duration.ofMillis(100))
-            .untilAsserted {
-                var foundInDlq = false
-                dlq.deadLetters().forEach { sequence ->
-                    sequence.forEach { deadLetter ->
-                        val payload = deadLetter.message().payload
-                        if (payload is FlightEvent.FlightScheduledEvent && payload.flightId == flightId) {
-                            foundInDlq = true
-                        }
-                    }
-                }
-                Assertions.assertTrue(foundInDlq, "The flight event should be in the dead letter queue")
-            }
+        flightApi.awaitFlightEventInDeadLetterQueue(flightId)
 
         // Now check that the flight does NOT appear in the destination projection
         val destinationFlights = flightApi.getFlightsByDestination(destination)

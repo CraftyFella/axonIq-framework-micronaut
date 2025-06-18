@@ -58,6 +58,7 @@ class ScheduledFlightsByDestinationProjection(private val connectionProvider: Co
         removeFlight(event.flightId)
     }
 
+    // Would like to replace this with UnitOfWorkAwareDeadLetterMessageHandlerInterceptor but I can't
     @MessageHandlerInterceptor(messageType = EventMessage::class)
     fun intercept(
         unitOfWork: UnitOfWork<out EventMessage<*>>,
@@ -65,22 +66,8 @@ class ScheduledFlightsByDestinationProjection(private val connectionProvider: Co
     ): Any? {
 
         try {
-            log.debug("Intercepting event: ${unitOfWork.message.payloadType.name}")
-
-            unitOfWork.onPrepareCommit { uow ->
-                log.debug("onPrepareCommit for event: ${uow.message.payloadType.name}")
-            }
-            unitOfWork.onCommit { uow ->
-                log.debug("onCommit for event: ${uow.message.payloadType.name}")
-            }
-            unitOfWork.onRollback { uow ->
-                log.debug("Preparing rollback for event: ${uow.message.payloadType.name}")
-            }
-            val result = interceptorChain.proceed()
-            log.debug("Intercepted event: ${unitOfWork.message.payloadType.name}")
-            return result
+            return interceptorChain.proceed()
         } catch (e: Exception) {
-            log.error("Error logging event type", e)
             unitOfWork.rollback()
             throw e
         }

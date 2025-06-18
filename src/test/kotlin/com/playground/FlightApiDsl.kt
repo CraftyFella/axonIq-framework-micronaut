@@ -1,5 +1,7 @@
 package com.playground
 
+import com.playground.library.DeadLetterQueueFactory
+import com.playground.projections.ScheduledFlightsByDestinationProjection
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
 import org.awaitility.Awaitility
@@ -7,7 +9,7 @@ import org.junit.jupiter.api.Assertions
 import java.time.Duration
 import java.util.UUID
 
-class FlightApiDsl(private val client: HttpClient) {
+class FlightApiDsl(private val client: HttpClient, private val deadLetterQueueFactory: DeadLetterQueueFactory? = null) {
     // Flight creation
     fun scheduleFlight(
         flightId: String = randomFlightId(),
@@ -97,7 +99,53 @@ class FlightApiDsl(private val client: HttpClient) {
                     "Flight should appear in the destination list")
             }
     }
+
+    fun awaitFlightEventInDeadLetterQueue(
+        flightId: String,
+        timeout: Duration = Duration.ofSeconds(5)
+    ) {
+        requireDeadLetterQueueFactory()
+
+        awaitEventInDeadLetterQueue(
+            processingGroup = ScheduledFlightsByDestinationProjection.NAME,
+            predicate = { payload ->
+                payload is FlightEvent.FlightScheduledEvent && payload.flightId == flightId
+            },
+            timeout = timeout
+        )
+    }
+
+    fun awaitEventInDeadLetterQueue(
+        processingGroup: String,
+        predicate: (Any) -> Boolean,
+        timeout: Duration = Duration.ofSeconds(5)
+    ) {
+        requireDeadLetterQueueFactory()
+
+        val dlq = deadLetterQueueFactory!!.create(processingGroup)
+
+        Awaitility.await()
+            .atMost(timeout)
+            .pollInterval(Duration.ofMillis(100))
+            .untilAsserted {
+                var foundInDlq = false
+                dlq.deadLetters().forEach { sequence ->
+                    sequence.forEach { deadLetter ->
+                        val payload = deadLetter.message().payload
+                        if (predicate(payload)) {
+                            foundInDlq = true
+                        }
+                    }
+                }
+                Assertions.assertTrue(foundInDlq, "Expected event not found in dead letter queue")
+            }
+    }
+
+    private fun requireDeadLetterQueueFactory() {
+        if (deadLetterQueueFactory == null) {
+            throw IllegalStateException("DeadLetterQueueFactory not provided to FlightApiDsl. Use flights(client, deadLetterQueueFactory) extension function.")
+        }
+    }
 }
 
-// Extension function to create the DSL
-fun HttpClient.flights() = FlightApiDsl(this)
+fun HttpClient.flights(deadLetterQueueFactory: DeadLetterQueueFactory? = null) = FlightApiDsl(this, deadLetterQueueFactory)

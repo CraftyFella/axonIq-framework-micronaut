@@ -7,11 +7,14 @@ import org.axonframework.config.EventProcessingConfigurer
 import org.axonframework.eventhandling.EventMessage
 import org.axonframework.eventhandling.deadletter.jdbc.GenericDeadLetterTableFactory
 import org.axonframework.eventhandling.deadletter.jdbc.JdbcSequencedDeadLetterQueue
+import org.axonframework.messaging.InterceptorChain
+import org.axonframework.messaging.MessageHandlerInterceptor
 import org.axonframework.messaging.deadletter.DeadLetter
 import org.axonframework.messaging.deadletter.Decisions
 import org.axonframework.messaging.deadletter.EnqueueDecision
 import org.axonframework.messaging.deadletter.EnqueuePolicy
 import org.axonframework.messaging.deadletter.SequencedDeadLetterQueue
+import org.axonframework.messaging.unitofwork.UnitOfWork
 import org.axonframework.serialization.Serializer
 import org.slf4j.LoggerFactory
 import java.util.function.Function
@@ -83,6 +86,21 @@ fun EventProcessingConfigurer.registerDeadLetterQueueUsingFactory(
             maxSequences = maxSequences,
             maxSequenceSize = maxSequenceSize
         )
+    }
+        .registerHandlerInterceptor(processingGroup) { UnitOfWorkAwareDeadLetterMessageHandlerInterceptor() }
+}
+
+// This class won't get called as the DQL stuff takes over completely. It would be nice if it did work.
+class UnitOfWorkAwareDeadLetterMessageHandlerInterceptor : MessageHandlerInterceptor<EventMessage<*>> {
+
+    override fun handle(unitOfWork: UnitOfWork<out EventMessage<*>>,
+                        interceptorChain: InterceptorChain): Any? {
+        try {
+            return interceptorChain.proceed()
+        } catch (e: Exception) {
+            unitOfWork.rollback()
+            throw e
+        }
     }
 }
 
