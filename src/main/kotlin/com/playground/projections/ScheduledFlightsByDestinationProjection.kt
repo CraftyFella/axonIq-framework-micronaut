@@ -5,11 +5,6 @@ import jakarta.inject.Singleton
 import org.axonframework.common.jdbc.ConnectionProvider
 import org.axonframework.config.ProcessingGroup
 import org.axonframework.eventhandling.EventHandler
-import org.axonframework.eventhandling.EventMessage
-import org.axonframework.messaging.InterceptorChain
-import org.axonframework.messaging.interceptors.MessageHandlerInterceptor
-import org.axonframework.messaging.unitofwork.UnitOfWork
-import org.axonframework.queryhandling.QueryMessage
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -56,21 +51,6 @@ class ScheduledFlightsByDestinationProjection(private val connectionProvider: Co
     fun on(event: FlightEvent.FlightCancelledEvent) {
         log.debug("DestinationProjection: Flight ${event.flightId} cancelled")
         removeFlight(event.flightId)
-    }
-
-    // Would like to replace this with UnitOfWorkAwareDeadLetterMessageHandlerInterceptor but I can't
-    @MessageHandlerInterceptor(messageType = EventMessage::class)
-    fun intercept(
-        unitOfWork: UnitOfWork<out EventMessage<*>>,
-        interceptorChain: InterceptorChain
-    ): Any? {
-
-        try {
-            return interceptorChain.proceed()
-        } catch (e: Exception) {
-            unitOfWork.rollback()
-            throw e
-        }
     }
 
     private fun insertFlight(flightId: String, destination: String) {

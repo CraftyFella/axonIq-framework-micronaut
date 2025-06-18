@@ -5,7 +5,7 @@ import com.playground.library.ApplicationConfigurer
 import com.playground.library.DeadLetterQueueFactory
 import com.playground.library.MicronautAggregateConfigurer
 import com.playground.library.registerAggregateUsingConfigurer
-import com.playground.library.registerDeadLetterQueueUsingFactory
+import com.playground.library.registerDeadLetterQueueUsingErrorHandler
 import com.playground.projections.CancelledFlightsCounterProjection
 import com.playground.projections.FlightDetailsInlineProjection
 import com.playground.projections.ScheduledFlightsByDestinationProjection
@@ -16,12 +16,8 @@ import com.playground.queries.FlightsByDestinationQueryHandler
 import com.playground.queries.FlightsByOriginQueryHandler
 import jakarta.inject.Singleton
 import org.axonframework.config.Configurer
-import org.axonframework.eventhandling.ListenerInvocationErrorHandler
 import org.axonframework.eventhandling.PropagatingErrorHandler
 import org.axonframework.eventhandling.TrackingEventProcessorConfiguration
-import org.axonframework.eventhandling.async.SequentialPolicy
-import org.axonframework.eventhandling.deadletter.DeadLetteringEventHandlerInvoker
-import java.time.Duration
 
 @Singleton
 class FlightApplicationConfigurer(
@@ -51,13 +47,12 @@ class FlightApplicationConfigurer(
                     .registerListenerInvocationErrorHandler(FlightDetailsInlineProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerEventHandler { flightDetailsInlineProjection }
                     // Asynchronous projections
-                    .registerListenerInvocationErrorHandler(ScheduledFlightsByDestinationProjection.NAME) { PropagatingErrorHandler.INSTANCE }
                     .registerTrackingEventProcessorConfiguration(ScheduledFlightsByDestinationProjection.NAME) {
                         TrackingEventProcessorConfiguration
                             .forParallelProcessing(2)
                             .andInitialSegmentsCount(2)
                     }
-                    .registerDeadLetterQueueUsingFactory(
+                    .registerDeadLetterQueueUsingErrorHandler(
                         deadLetterQueueFactory = deadLetterQueueFactory,
                         processingGroup = ScheduledFlightsByDestinationProjection.NAME
                     )
