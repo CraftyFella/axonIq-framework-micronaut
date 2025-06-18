@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Assertions
 import java.time.Duration
 import java.util.UUID
 
-class FlightApiDsl(private val client: HttpClient, private val deadLetterQueueFactory: DeadLetterQueueFactory? = null) {
+class FlightApiDsl(private val client: HttpClient, private val deadLetterQueueFactory: DeadLetterQueueFactory) {
     // Flight creation
     fun scheduleFlight(
         flightId: String = randomFlightId(),
@@ -104,8 +104,6 @@ class FlightApiDsl(private val client: HttpClient, private val deadLetterQueueFa
         flightId: String,
         timeout: Duration = Duration.ofSeconds(5)
     ) {
-        requireDeadLetterQueueFactory()
-
         awaitEventInDeadLetterQueue(
             processingGroup = ScheduledFlightsByDestinationProjection.NAME,
             predicate = { payload ->
@@ -120,8 +118,6 @@ class FlightApiDsl(private val client: HttpClient, private val deadLetterQueueFa
         predicate: (Any) -> Boolean,
         timeout: Duration = Duration.ofSeconds(5)
     ) {
-        requireDeadLetterQueueFactory()
-
         val dlq = deadLetterQueueFactory!!.create(processingGroup)
 
         Awaitility.await()
@@ -141,11 +137,6 @@ class FlightApiDsl(private val client: HttpClient, private val deadLetterQueueFa
             }
     }
 
-    private fun requireDeadLetterQueueFactory() {
-        if (deadLetterQueueFactory == null) {
-            throw IllegalStateException("DeadLetterQueueFactory not provided to FlightApiDsl. Use flights(client, deadLetterQueueFactory) extension function.")
-        }
-    }
 }
 
-fun HttpClient.flights(deadLetterQueueFactory: DeadLetterQueueFactory? = null) = FlightApiDsl(this, deadLetterQueueFactory)
+fun HttpClient.flights(deadLetterQueueFactory: DeadLetterQueueFactory) = FlightApiDsl(this, deadLetterQueueFactory)
