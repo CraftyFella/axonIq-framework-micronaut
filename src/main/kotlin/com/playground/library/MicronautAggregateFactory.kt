@@ -7,6 +7,8 @@ import org.axonframework.config.AggregateConfigurer
 import org.axonframework.config.Configurer
 import org.axonframework.eventsourcing.EventCountSnapshotTriggerDefinition
 import org.axonframework.eventsourcing.GenericAggregateFactory
+import org.axonframework.modelling.command.CreationPolicyAggregateFactory
+import org.axonframework.modelling.command.NoArgumentConstructorCreationPolicyAggregateFactory
 
 open class MicronautAggregateFactory<T>(
     private val beanContext: BeanContext,
@@ -55,15 +57,30 @@ class MicronautAggregateConfigurer(
     ): AggregateConfigurer<T> {
 
         // Create the factory instance
-        val factory = MicronautAggregateFactory(beanContext, aggregateType)
+        val aggregateFactory = MicronautAggregateFactory(beanContext, aggregateType)
+        val creationPolicyAggregateFactory = MicronautCreationPolicyAggregateFactory(beanContext, aggregateType)
 
         // Return configured AggregateConfigurer
         return AggregateConfigurer
             .defaultConfiguration(aggregateType)
-            .configureAggregateFactory { _ -> factory }
+            .configureAggregateFactory { _ -> aggregateFactory }
+            .configureCreationPolicyAggregateFactory { creationPolicyAggregateFactory }
             .configureSnapshotTrigger { c ->
                 EventCountSnapshotTriggerDefinition(c.snapshotter(), snapshotTriggerThreshold)
             }
+    }
+}
+
+class MicronautCreationPolicyAggregateFactory<A>(
+    private val beanContext: BeanContext,
+    aggregateClass: Class<out A>
+) : CreationPolicyAggregateFactory<A> {
+
+    private val delegateFactory = NoArgumentConstructorCreationPolicyAggregateFactory(aggregateClass)
+
+    override fun create(identifier: Any?): A & Any {
+        val aggregate = delegateFactory.create(identifier)
+        return beanContext.inject(aggregate)
     }
 }
 

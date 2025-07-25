@@ -3,7 +3,7 @@ GET http://localhost:8080/flights
 Accept: application/json
 
 ### Get flight details by ID
-GET http://localhost:8080/flights/1e752106-5f9e-4bf9-8310-8905b334d867
+GET http://localhost:8080/flights/wibble1
 Accept: application/json
 
 ### Get flights by destination
@@ -20,7 +20,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "flightId": "bang-75"
+  "flightId": "simon-123"
 }
 
 ### Schedule a new flight with auto-generated values
@@ -31,7 +31,7 @@ Accept: application/json
 {}
 
 ### Delay a flight
-PATCH http://localhost:8080/flights/1e752106-5f9e-4bf9-8310-8905b334d867/delay
+PATCH http://localhost:8080/flights/wibble1/delay
 Content-Type: application/json
 Accept: application/json
 
